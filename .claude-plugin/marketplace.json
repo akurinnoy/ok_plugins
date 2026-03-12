@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ok-plugins",
+  "description": "Custom Claude Code plugins by akurinnoy",
+  "owner": {
+    "name": "Oleksii Kurinnyi"
+  },
+  "plugins": [
+    {
+      "name": "ok-pr-review",
+      "description": "Two-stage PR review: standard review for correctness and security, then deep review for design quality, testing rigor, and anti-patterns",
+      "author": {
+        "name": "Oleksii Kurinnyi"
+      },
+      "source": "./plugins/ok-pr-review",
+      "category": "productivity",
+      "homepage": "https://github.com/akurinnoy/ok-plugins/tree/main/plugins/ok-pr-review"
+    }
+  ]
+}
