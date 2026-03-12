@@ -15,6 +15,16 @@
       "source": "./plugins/ok-pr-review",
       "category": "productivity",
       "homepage": "https://github.com/akurinnoy/ok-plugins/tree/main/plugins/ok-pr-review"
+    },
+    {
+      "name": "ok-prerelease-verification",
+      "description": "Generates manual step-by-step verification instructions for confirming a GitHub PR fix is correctly included in a DWO prerelease build",
+      "author": {
+        "name": "Oleksii Kurinnyi"
+      },
+      "source": "./plugins/ok-prerelease-verification",
+      "category": "productivity",
+      "homepage": "https://github.com/akurinnoy/ok-plugins/tree/main/plugins/ok-prerelease-verification"
     }
   ]
 }

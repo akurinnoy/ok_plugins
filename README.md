@@ -7,6 +7,7 @@ Custom Claude Code plugins by akurinnoy.
 | Plugin | Description |
 |--------|-------------|
 | [ok-pr-review](./plugins/ok-pr-review) | Two-stage PR review: standard review + deep review |
+| [ok-prerelease-verification](./plugins/ok-prerelease-verification) | DWO prerelease verification checklist generator |
 
 ## Installation
 

@@ -1,0 +1,7 @@
+{
+  "name": "ok-prerelease-verification",
+  "description": "Generates manual step-by-step verification instructions for confirming a GitHub PR fix is correctly included in a DWO prerelease build",
+  "author": {
+    "name": "Oleksii Kurinnyi"
+  }
+}
