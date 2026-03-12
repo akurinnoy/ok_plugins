@@ -39,11 +39,11 @@ From the provided URL/reference, extract:
 - Repository name
 - PR number
 
-**Example**: `https://github.com/che-incubator/dash-licenses/pull/32`
-- Owner: `che-incubator`
-- Repo: `dash-licenses`
-- PR: `32`
-- Full reference: `che-incubator/dash-licenses#32`
+**Example**: `https://github.com/acme-org/my-project/pull/123`
+- Owner: `acme-org`
+- Repo: `my-project`
+- PR: `123`
+- Full reference: `acme-org/my-project#123`
 
 **STEP 2: Validate Standard Review Completion**
 

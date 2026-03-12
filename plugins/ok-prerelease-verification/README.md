@@ -5,7 +5,7 @@ Generates manual, copy-pasteable verification checklists for confirming a specif
 ## Usage
 
 ```
-/ok-prerelease-verification https://github.com/devfile/devworkspace-operator/pull/1572
+/ok-prerelease-verification https://github.com/devfile/devworkspace-operator/pull/123
 ```
 
 ## What It Does

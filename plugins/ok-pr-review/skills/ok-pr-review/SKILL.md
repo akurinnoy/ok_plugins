@@ -29,11 +29,11 @@ From the URL or reference, extract:
 - Repository name
 - PR number
 
-Example: `https://github.com/devfile/devworkspace-operator/pull/1234`
-- Owner: `devfile`
-- Repo: `devworkspace-operator`
-- PR: `1234`
-- Full reference: `devfile/devworkspace-operator#1234` (used in completion marker)
+Example: `https://github.com/acme-org/my-project/pull/123`
+- Owner: `acme-org`
+- Repo: `my-project`
+- PR: `123`
+- Full reference: `acme-org/my-project#123` (used in completion marker)
 
 ### 2. Fetch PR Overview (Lightweight First Pass)
 
@@ -239,7 +239,7 @@ Before reporting issues:
 
 **STANDARD_REVIEW_COMPLETE: `<owner>/<repo>#<number>`** - This marker indicates the standard review is complete for this specific PR. The deep review skill can now be invoked with the same PR URL.
 
-**Example**: `STANDARD_REVIEW_COMPLETE: che-incubator/dash-licenses#32`
+**Example**: `STANDARD_REVIEW_COMPLETE: acme-org/my-project#123`
 
 ## Language-Specific Checks
 

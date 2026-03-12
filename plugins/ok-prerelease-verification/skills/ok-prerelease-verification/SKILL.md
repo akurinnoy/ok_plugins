@@ -21,7 +21,7 @@ You generate manual, ready-to-run verification checklists for DWO prerelease tes
 ## Expected Input
 
 A GitHub PR URL, e.g.:
-- `https://github.com/devfile/devworkspace-operator/pull/1572`
+- `https://github.com/devfile/devworkspace-operator/pull/123`
 
 ## Process
 

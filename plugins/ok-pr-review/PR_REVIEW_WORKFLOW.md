@@ -39,13 +39,13 @@ The PR review system consists of two skills that work in sequence:
 
 ```bash
 # Step 1: Run standard review
-/ok-pr-review https://github.com/che-incubator/dash-licenses/pull/32
+/ok-pr-review https://github.com/acme-org/my-project/pull/123
 
 # Wait for it to complete (look for STANDARD_REVIEW_COMPLETE marker)
-# Output will show: STANDARD_REVIEW_COMPLETE: che-incubator/dash-licenses#32
+# Output will show: STANDARD_REVIEW_COMPLETE: acme-org/my-project#123
 
 # Step 2: Run deep review WITH THE SAME PR URL
-/ok-pr-deep-review https://github.com/che-incubator/dash-licenses/pull/32
+/ok-pr-deep-review https://github.com/acme-org/my-project/pull/123
 ```
 
 ### Alternative PR URL Formats
@@ -70,14 +70,14 @@ If you try to run `/ok-pr-deep-review` without running `/ok-pr-review` first:
 ```
 ❌ Deep review cannot proceed.
 
-Reason: Standard review for che-incubator/dash-licenses#32 not found in this conversation.
+Reason: Standard review for acme-org/my-project#123 not found in this conversation.
 
 The standard review (ok-pr-review skill) must be run FIRST on the same PR before the deep review.
 
 Steps to fix:
-1. Run: /ok-pr-review https://github.com/che-incubator/dash-licenses/pull/32
+1. Run: /ok-pr-review https://github.com/acme-org/my-project/pull/123
 2. Wait for completion (look for STANDARD_REVIEW_COMPLETE marker)
-3. Then run: /ok-pr-deep-review https://github.com/che-incubator/dash-licenses/pull/32
+3. Then run: /ok-pr-deep-review https://github.com/acme-org/my-project/pull/123
 ```
 
 ### What Happens If You Use Different PRs?
@@ -85,17 +85,17 @@ Steps to fix:
 If you run standard review on PR #32 but deep review on PR #45:
 
 ```bash
-/ok-pr-review https://github.com/owner/repo/pull/32
-# ... completes with STANDARD_REVIEW_COMPLETE: owner/repo#32
+/ok-pr-review https://github.com/owner/repo/pull/100
+# ... completes with STANDARD_REVIEW_COMPLETE: owner/repo#100
 
-/ok-pr-deep-review https://github.com/owner/repo/pull/45
+/ok-pr-deep-review https://github.com/owner/repo/pull/200
 ```
 
 Result:
 ```
 ❌ Deep review cannot proceed.
 
-Reason: Standard review for owner/repo#45 not found in this conversation.
+Reason: Standard review for owner/repo#200 not found in this conversation.
 
 The standard review (ok-pr-review skill) must be run FIRST on the same PR before the deep review.
 ```
@@ -118,7 +118,7 @@ The standard review ends with:
 
 ---
 
-**STANDARD_REVIEW_COMPLETE: che-incubator/dash-licenses#32** - This marker indicates the standard review is complete for this specific PR. The deep review skill can now be invoked with the same PR URL.
+**STANDARD_REVIEW_COMPLETE: acme-org/my-project#123** - This marker indicates the standard review is complete for this specific PR. The deep review skill can now be invoked with the same PR URL.
 ```
 
 ## Deep Review Validation
