@@ -60,7 +60,7 @@ gh pr diff <number> --repo <owner>/<repo>
 ```
 
 Read relevant local source files if needed:
-- Use `Read` tool to read files in the local repo at `/Users/okurinny/Workspace/devfile/devworkspace-operator/`
+- Use `Read` tool to read files in the local devworkspace-operator repo (if cloned)
 - Use `Grep` to find related code patterns
 
 **Determine the verification criteria — answer these questions:**
@@ -198,7 +198,4 @@ oc delete project issue-<NUM>
 
 ## Reference
 
-The verification methodology is documented at:
-`/Users/okurinny/.claude/knowledge/repos/devworkspace-operator/patterns/prerelease-issue-verification.md`
-
-Read it at the start if you need to refresh the methodology or gotchas.
+If available, read the prerelease verification methodology documentation in the local knowledge base before starting.

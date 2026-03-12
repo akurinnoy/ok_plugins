@@ -58,7 +58,7 @@ STANDARD_REVIEW_COMPLETE: <owner>/<repo>#<number>
 
 Reason: Standard review for {owner}/{repo}#{number} not found in this conversation.
 
-The standard review (ok-pr-review skill) must be run FIRST on the same PR before the deep review.
+The ok-pr-review skill must be run FIRST on the same PR before the deep review.
 
 Steps to fix:
 1. Run: /ok-pr-review https://github.com/{owner}/{repo}/pull/{number}
