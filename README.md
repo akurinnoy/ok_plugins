@@ -1,6 +1,6 @@
 # ok-plugins
 
-Custom Claude Code plugins by akurinnoy.
+Custom Claude Code plugin marketplace by akurinnoy.
 
 ## Plugins
 
@@ -11,10 +11,21 @@ Custom Claude Code plugins by akurinnoy.
 
 ## Installation
 
-Plugins can be installed via Claude Code's plugin system:
+### 1. Register the marketplace (one-time)
+
+In Claude Code, run:
 
 ```
-/plugin install <plugin-name>@ok-plugins
+/plugin marketplace add
+```
+
+Select "GitHub repository" and enter `akurinnoy/ok_plugins`.
+
+### 2. Install plugins
+
+```
+/plugin install ok-pr-review@ok-plugins
+/plugin install ok-prerelease-verification@ok-plugins
 ```
 
 ## Adding New Plugins
