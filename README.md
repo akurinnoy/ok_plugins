@@ -6,7 +6,7 @@ Custom Claude Code plugin marketplace by akurinnoy.
 
 | Plugin | Description |
 |--------|-------------|
-| [ok-pr-review](./plugins/ok-pr-review) | Two-stage PR review: standard review + deep review |
+| [ok-pr-review](./plugins/ok-pr-review) | PR review suite: summary, standard review, deep review, impact review, domain profiling, comment posting |
 | [ok-prerelease-verification](./plugins/ok-prerelease-verification) | DWO prerelease verification checklist generator |
 
 ## Installation
