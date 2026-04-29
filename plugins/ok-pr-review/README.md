@@ -47,9 +47,19 @@ This path is stable across plugin updates.
 
 ## Installation
 
+Add the marketplace in Claude Code:
+
+```
+/plugin marketplace add
+```
+
+Then install the plugin:
+
 ```
 /plugin install ok-pr-review@ok-plugins
 ```
+
+or select `ok-pr-review` from the list.
 
 ## License
 
