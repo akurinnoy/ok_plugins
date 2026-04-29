@@ -6,8 +6,9 @@ Custom Claude Code plugin marketplace by akurinnoy.
 
 | Plugin | Description |
 |--------|-------------|
-| [ok-pr-review](./plugins/ok-pr-review) | Two-stage PR review: standard review + deep review |
+| [ok-pr-review](./plugins/ok-pr-review) | PR review suite: summary, standard review, deep review, impact review, domain profiling, comment posting |
 | [ok-prerelease-verification](./plugins/ok-prerelease-verification) | DWO prerelease verification checklist generator |
+| [ok-obsidian-logger](./plugins/ok-obsidian-logger) | Obsidian daily note logger |
 
 ## Installation
 
@@ -26,6 +27,7 @@ Select "GitHub repository" and enter `akurinnoy/ok_plugins`.
 ```
 /plugin install ok-pr-review@ok-plugins
 /plugin install ok-prerelease-verification@ok-plugins
+/plugin install ok-obsidian-logger@ok-plugins
 ```
 
 ## Adding New Plugins

@@ -1,37 +1,49 @@
 # ok-pr-review
 
-Two-stage pull request review plugin for Claude Code.
+PR review suite for Claude Code: summary, standard review, deep review, system-level impact review, domain profiling, and comment posting.
 
-## Skills
+## Commands
 
-### 1. ok-pr-review (Standard Review)
+| Command | Model | Description |
+|---------|-------|-------------|
+| `/ok-pr-review:summary` | sonnet | Quick pre-flight orientation - key areas, risks, reviewer/author guidance |
+| `/ok-pr-review:review` | opus | Standard code review - correctness, security, quality, performance |
+| `/ok-pr-review:deep-review` | opus | Deep analysis - design quality, anti-patterns, testing rigor |
+| `/ok-pr-review:impact` | opus | System-level review - supply chain, RBAC, ops, compatibility |
+| `/ok-pr-review:learn-repo` | sonnet | Study a repo and write a reusable domain profile |
+| `/ok-pr-review:comment` | sonnet | Aggregate findings and optionally post to GitHub as a pending review |
 
-Fetches PR data from GitHub and provides structured feedback on:
-- Correctness vs linked issue requirements
-- Security vulnerabilities
-- Code quality and performance
-- Best practices
-
-**Must be run first.** Outputs a `STANDARD_REVIEW_COMPLETE` marker that the deep review depends on.
-
-### 2. ok-pr-deep-review (Deep Review)
-
-Builds on the standard review with deeper analysis of:
-- Design and abstraction quality
-- Code thoughtfulness indicators
-- Testing quality and rigor
-- Language-specific anti-patterns
-- Integration contract verification
-
-**Must be run after ok-pr-review on the same PR.** Reuses PR data already in context (no duplicate API calls).
-
-## Usage
+## Workflow
 
 ```
-/ok-pr-review https://github.com/owner/repo/pull/123
-# Wait for STANDARD_REVIEW_COMPLETE marker
-/ok-pr-deep-review https://github.com/owner/repo/pull/123
+/ok-pr-review:learn-repo owner/repo          (once per repo)
+    |
+    v
+/ok-pr-review:summary owner/repo#123        (quick orientation)
+    |
+    v
+/ok-pr-review:review owner/repo#123         (required first)
+    |
+    +---> /ok-pr-review:deep-review          (optional, needs review first)
+    +---> /ok-pr-review:impact               (optional, needs review first)
+    |
+    v
+/ok-pr-review:comment                        (aggregates all findings)
 ```
+
+`summary` and `learn-repo` are independent. `deep-review` and `impact` both require `review` to run first. `comment` reads whichever findings files exist and aggregates them.
+
+## Data Storage
+
+Review artifacts are stored at `~/.claude/ok-pr-review/repos/{owner}/{repo}/`:
+- `profile.md` - domain profile (from `learn-repo`)
+- `{pr}-summary.md` - pre-flight summary
+- `{pr}-review.md` - standard review findings
+- `{pr}-deep-review.md` - deep review findings
+- `{pr}-impact.md` - system-level findings
+- `{pr}-comment.md` - prepared comments
+
+This path is stable across plugin updates.
 
 ## Installation
 
