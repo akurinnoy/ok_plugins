@@ -1,6 +1,6 @@
 {
   "name": "ok-pr-review",
-  "description": "Two-stage PR review: standard review for correctness and security, then deep review for design quality, testing rigor, and anti-patterns",
+  "description": "PR review suite: standard review, deep review, system-level impact review, domain profiling, and comment posting",
   "author": {
     "name": "Oleksii Kurinnyi"
   }
