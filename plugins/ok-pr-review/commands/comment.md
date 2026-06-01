@@ -15,7 +15,7 @@ allowed-tools:
 
 Aggregate review findings, compose final comment text, and (when the user explicitly asks) post to GitHub as a **pending review draft**.
 
-**MANDATORY**: Do not post anything to GitHub until the user explicitly says to ("post", "submit", "go ahead"). Prepare and show comments first - the user may want to edit before posting.
+**MANDATORY**: Do not post anything to GitHub until the user explicitly says to ("post", "submit", "go ahead"). Prepare and show comments first - the user may want to edit before posting. Exception: if `OK_PR_REVIEW_AUTO_POST=true` is set, skip the approval prompt and post directly (see Step 3).
 
 ## Input
 
@@ -58,7 +58,23 @@ Write the aggregated, formatted comments to:
 
 Use the numbered-section format (see Comment File Format below).
 
-### 3. Show to User and Ask
+### 3. Show to User or Auto-Post
+
+Check the environment variable:
+```bash
+echo "$OK_PR_REVIEW_AUTO_POST"
+```
+
+**If `OK_PR_REVIEW_AUTO_POST` is `true`:**
+
+Log this message:
+```
+Auto-post enabled (OK_PR_REVIEW_AUTO_POST=true) - posting {N} inline, {M} general comments to GitHub without user confirmation.
+```
+
+Then proceed directly to Step 4.
+
+**Otherwise (not set, empty, or any other value):**
 
 Show the prepared comments. Then ask:
 ```
