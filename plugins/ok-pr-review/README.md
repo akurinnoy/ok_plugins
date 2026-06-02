@@ -11,7 +11,7 @@ PR review suite for Claude Code: summary, standard review, deep review, system-l
 | `/ok-pr-review:deep-review` | opus | Deep analysis - design quality, anti-patterns, testing rigor |
 | `/ok-pr-review:impact` | opus | System-level review - supply chain, RBAC, ops, compatibility |
 | `/ok-pr-review:learn-repo` | sonnet | Study a repo and write a reusable domain profile |
-| `/ok-pr-review:comment` | sonnet | Aggregate findings and optionally post to GitHub as a pending review |
+| `/ok-pr-review:comment` | sonnet | Aggregate findings and post to GitHub as a review (pending draft or submitted) |
 
 ## Workflow
 
@@ -44,6 +44,23 @@ Review artifacts are stored at `~/.claude/ok-pr-review/repos/{owner}/{repo}/`:
 - `{pr}-comment.md` - prepared comments
 
 This path is stable across plugin updates.
+
+## CI / Non-Interactive Mode
+
+Set `OK_PR_REVIEW_AUTO_POST=true` to skip the interactive approval prompt and submit the review directly.
+
+In CI mode, the `comment` command:
+- Matches findings against the PR diff to create inline comments on specific code lines
+- Submits the review immediately with `COMMENT` action (not a pending draft)
+- Findings that can't be matched to a specific line go in the review body
+
+```bash
+export OK_PR_REVIEW_AUTO_POST=true
+claude -p "/ok-pr-review:review https://github.com/org/repo/pull/123" && \
+claude -p "/ok-pr-review:comment org/repo#123"
+```
+
+Without this env var, the `comment` command shows prepared comments and waits for explicit user approval before posting.
 
 ## Installation
 

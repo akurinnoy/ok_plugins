@@ -58,21 +58,38 @@ Write the aggregated, formatted comments to:
 
 Use the numbered-section format (see Comment File Format below).
 
-### 3. Show to User or Auto-Post
+### 3. Diff-Match Findings (CI only)
 
 Check the environment variable:
 ```bash
 echo "$OK_PR_REVIEW_AUTO_POST"
 ```
 
+**If `OK_PR_REVIEW_AUTO_POST` is NOT `true`**, skip to Step 3a.
+
 **If `OK_PR_REVIEW_AUTO_POST` is `true`:**
+
+Read the PR diff from the already-fetched file:
+```bash
+cat /tmp/pr-review-{owner}-{repo}-{pr}/diff.txt
+```
+
+For each finding currently classified as "General" (no file+line):
+- Scan the finding text for file paths that appear in the diff
+- Search for code snippets from the finding within the diff hunks of that file
+- If a match is found, extract the actual file line number from the diff hunk header (e.g., `@@ -10,5 +12,7 @@` - use the `+` side line number for new code) and reclassify the finding as "Inline" with the matched file path and line
+- Findings that can't be matched remain "General" in the review body
+
+Update the `{pr-number}-comment.md` file with any reclassified findings.
 
 Log this message:
 ```
-Auto-post enabled (OK_PR_REVIEW_AUTO_POST=true) - posting {N} inline, {M} general comments to GitHub without user confirmation.
+Auto-post enabled (OK_PR_REVIEW_AUTO_POST=true) - submitting review with {N} inline, {M} general comments to GitHub without user confirmation.
 ```
 
 Then proceed directly to Step 4.
+
+### 3a. Show to User and Ask
 
 **Otherwise (not set, empty, or any other value):**
 
@@ -106,8 +123,10 @@ mcp tool: pull_request_review_write
   repo: <repo>
   pullNumber: <number>
   commitID: <head-sha>
-  (no event - leave as pending draft)
 ```
+
+- **CI mode** (`OK_PR_REVIEW_AUTO_POST=true`): set `event: COMMENTED` to submit the review immediately
+- **Interactive mode**: no event - leave as pending draft
 
 ### 7. Add Inline Comments
 
@@ -142,7 +161,15 @@ gh api "repos/<owner>/<repo>/pulls/<number>/comments" \
 
 ### 9. Confirm to User
 
-Report what was posted:
+**CI mode** (`OK_PR_REVIEW_AUTO_POST=true`):
+```
+Review submitted on <owner>/<repo>#<number>:
+- N inline comments
+- N general comments in review body
+- N replies posted directly
+```
+
+**Interactive mode:**
 ```
 Pending review created on <owner>/<repo>#<number>:
 - N inline comments
