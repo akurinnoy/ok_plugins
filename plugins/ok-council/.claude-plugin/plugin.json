@@ -1,0 +1,8 @@
+{
+  "name": "ok-council",
+  "version": "1.0.0",
+  "description": "3-model LLM Council: Claude Opus, Gemini 3 Pro, GPT-5.3 Codex — independent answers, anonymous peer review, synthesized verdict",
+  "author": {
+    "name": "Oleksii Kurinnyi"
+  }
+}
