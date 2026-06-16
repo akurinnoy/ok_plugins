@@ -1,4 +1,4 @@
-# ok-crossmodel-council
+# ok-council
 
 A Claude Code plugin that runs your question through three different LLMs — **Claude Opus 4.6**, **Gemini 3 Pro**, and **GPT-5.3 Codex** — has them peer-review each other anonymously, then synthesizes a verdict.
 
@@ -76,13 +76,13 @@ The workflow verifies both tools before running and reports clear install instru
 Select "GitHub repository" and enter `akurinnoy/ok-plugins`.
 
 ```
-/plugin install ok-crossmodel-council@ok-plugins
+/plugin install ok-council@ok-plugins
 ```
 
 ### Local (for development)
 
 ```bash
-claude --plugin-dir /path/to/ok-crossmodel-council
+claude --plugin-dir /path/to/ok-council
 ```
 
 ## Usage
@@ -96,7 +96,7 @@ Or trigger it conversationally — Claude will recognize queries that benefit fr
 ## Plugin Structure
 
 ```
-ok-crossmodel-council/
+ok-council/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest
 ├── skills/
