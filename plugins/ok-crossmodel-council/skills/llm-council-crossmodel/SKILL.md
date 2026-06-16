@@ -14,7 +14,7 @@ This skill requires two external CLI tools alongside Claude Code:
 | Tool | Command | Install |
 |------|---------|---------|
 | Gemini CLI | `gemini` | `npm install -g @google/gemini-cli` or see [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) |
-| Cursor Agent CLI | `agent` | Installed with Cursor; ensure `agent` is on your `$PATH` |
+| Cursor Agent CLI | `agent` | `curl https://cursor.com/install -fsS \| bash` — see [cursor.com/docs/cli/installation](https://cursor.com/docs/cli/installation) |
 
 Before the workflow runs, it verifies both tools are available and reports any that are missing with install instructions.
 

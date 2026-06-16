@@ -8,7 +8,7 @@ Custom Claude Code plugin marketplace by akurinnoy.
 |--------|-------------|
 | [ok-pr-review](./plugins/ok-pr-review) | PR review suite: summary, standard review, deep review, impact review, domain profiling, comment posting |
 | [ok-prerelease-verification](./plugins/ok-prerelease-verification) | DWO prerelease verification checklist generator |
-| [ok-crossmodel-council](./plugins/ok-crossmodel-council) | 3-model LLM Council: Claude Opus, Gemini 3 Pro, GPT-5.3 Codex. Requires [Gemini CLI](https://github.com/google-gemini/gemini-cli) and [Cursor Agent CLI](https://cursor.com) |
+| [ok-crossmodel-council](./plugins/ok-crossmodel-council) | 3-model LLM Council: Claude Opus, Gemini 3 Pro, GPT-5.3 Codex. Requires [Gemini CLI](https://github.com/google-gemini/gemini-cli) and [Cursor Agent CLI](https://cursor.com/docs/cli/installation) |
 
 ## Installation
 

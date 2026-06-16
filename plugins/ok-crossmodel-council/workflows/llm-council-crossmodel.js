@@ -59,7 +59,7 @@ if (!toolChecks.gemini.found) {
   missing.push("- **gemini** — install via `npm install -g @google/gemini-cli` or see https://github.com/google-gemini/gemini-cli")
 }
 if (!toolChecks.agent.found) {
-  missing.push("- **agent** — installed with Cursor; make sure `agent` is on your $PATH")
+  missing.push("- **agent** — install via `curl https://cursor.com/install -fsS | bash` or see https://cursor.com/docs/cli/installation")
 }
 
 if (missing.length > 0) {

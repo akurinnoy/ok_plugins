@@ -61,7 +61,7 @@ Two external CLI tools must be installed and on your `$PATH`:
 | Tool | Command | How to Install |
 |------|---------|----------------|
 | Gemini CLI | `gemini` | `npm install -g @google/gemini-cli` — [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) |
-| Cursor Agent CLI | `agent` | Installed with [Cursor](https://cursor.com); ensure `agent` is on your `$PATH` |
+| Cursor Agent CLI | `agent` | `curl https://cursor.com/install -fsS \| bash` — see [cursor.com/docs/cli/installation](https://cursor.com/docs/cli/installation) |
 
 The workflow verifies both tools before running and reports clear install instructions if anything is missing.
 
