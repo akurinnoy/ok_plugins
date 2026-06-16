@@ -5,7 +5,7 @@ description: "Run a query through a 3-model LLM Council (Claude Opus 4.6, Gemini
 
 # LLM Council — Cross-Model
 
-A multi-model council that runs your question through three different LLMs, has them peer-review each other anonymously, and synthesizes a verdict. Unlike the full council (which uses 5 sub-agents with different thinking lenses on the same model), this council uses 3 genuinely different models to get diverse model-level perspectives.
+A multi-model council that runs your question through three genuinely different LLMs, has them peer-review each other anonymously, and synthesizes a verdict. The diversity comes from different model architectures and training data, not from prompting the same model with different thinking lenses.
 
 ## Prerequisites
 
@@ -46,16 +46,5 @@ Use this when you want **genuine model diversity** rather than perspective diver
 ## When NOT to use
 
 - Trivial questions with one right answer
-- Creative writing tasks (use the full council with thinking-lens diversity instead)
+- Creative writing tasks where stylistic diversity matters more than factual diversity
 - Questions requiring tool use or file access (the Gemini and Cursor agents only return text)
-
-## How it differs from /llm-council
-
-| | /llm-council | /llm-council-crossmodel |
-|---|---|---|
-| Models | 1 (Claude, 5 sub-agents) | 3 (Claude, Gemini, GPT) |
-| Diversity source | Thinking lenses (Contrarian, First Principles, etc.) | Different model architectures and training |
-| Advisors | 5 | 3 |
-| Phases | 4 (frame, advise, review, synthesize) | 3 (answer, review, synthesize) |
-| Output | HTML report + transcript | Inline verdict |
-| Best for | Strategic decisions needing multiple human-like angles | Technical questions needing model-level diversity |

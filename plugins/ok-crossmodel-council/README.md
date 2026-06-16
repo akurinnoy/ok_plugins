@@ -51,7 +51,7 @@ A Claude Code plugin that runs your question through three different LLMs — **
 ## When NOT to Use
 
 - Trivial questions with one right answer
-- Creative writing (use `/llm-council` with thinking-lens diversity instead)
+- Creative writing where stylistic diversity matters more than factual diversity
 - Questions requiring tool use or file access (Gemini and Cursor agents only return text)
 
 ## Prerequisites
@@ -92,17 +92,6 @@ claude --plugin-dir /path/to/ok-crossmodel-council
 ```
 
 Or trigger it conversationally — Claude will recognize queries that benefit from cross-model diversity.
-
-## Comparison with /llm-council
-
-| | /llm-council | /llm-council-crossmodel |
-|---|---|---|
-| Models | 1 (Claude, 5 sub-agents) | 3 (Claude, Gemini, GPT) |
-| Diversity source | Thinking lenses (Contrarian, First Principles, etc.) | Different model architectures and training data |
-| Advisors | 5 | 3 |
-| Phases | 4 (frame, advise, review, synthesize) | 3 (answer, review, synthesize) |
-| Output | HTML report + transcript | Inline verdict |
-| Best for | Strategic decisions needing multiple human-like angles | Technical questions needing model-level diversity |
 
 ## Plugin Structure
 
