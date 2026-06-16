@@ -25,6 +25,16 @@
       "source": "./plugins/ok-prerelease-verification",
       "category": "productivity",
       "homepage": "https://github.com/akurinnoy/ok-plugins/tree/main/plugins/ok-prerelease-verification"
+    },
+    {
+      "name": "ok-crossmodel-council",
+      "description": "3-model LLM Council: runs your query through Claude Opus, Gemini 3 Pro, and GPT-5.3 Codex independently, has them peer-review anonymously, then synthesizes a verdict",
+      "author": {
+        "name": "Oleksii Kurinnyi"
+      },
+      "source": "./plugins/ok-crossmodel-council",
+      "category": "productivity",
+      "homepage": "https://github.com/akurinnoy/ok-plugins/tree/main/plugins/ok-crossmodel-council"
     }
   ]
 }
