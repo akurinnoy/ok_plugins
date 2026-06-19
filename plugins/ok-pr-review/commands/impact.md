@@ -1,5 +1,5 @@
 ---
-description: System-level review - supply chain, RBAC, ops, compatibility
+description: System-level review - supply chain, RBAC, ops, compatibility, evolvability
 argument-hint: <pr-url | owner/repo#number>
 model: opus
 allowed-tools:
@@ -13,7 +13,7 @@ allowed-tools:
 
 # PR Impact Review
 
-Review a PR for system-level concerns - operational readiness, security posture, supply chain, compatibility. This command does NOT repeat code-level findings from `/ok-pr-review:review`. It asks: **what does this change mean for the running system?**
+Review a PR for system-level concerns - operational readiness, security posture, supply chain, compatibility, and evolvability. This command does NOT repeat code-level findings from `/ok-pr-review:review`. It asks: **what does this change mean for the running system, and how well will it survive requirement evolution?**
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ The diff is already in context from `/ok-pr-review:review`. If not available, re
 
 Check `files.txt`: if ALL changed files are `*.md`, `*.rst`, `*.txt`, or under `docs/`, this is a documentation-only PR - skip Tier 1, run no Tier 2 checks, and report "No system-level concerns (documentation-only PR)."
 
-Otherwise, run Tier 1 (always) and any triggered Tier 2 checks.
+Otherwise, run Tier 1 (always), any triggered Tier 2 checks, and any triggered Tier 3 checks.
 
 ### 5. Run Checks
 
@@ -215,6 +215,80 @@ Scan the diff for each trigger. Run the checklist when the trigger fires. Only t
 
 ---
 
+## Tier 3: Evolvability
+
+Assess how well the changes will survive natural requirement evolution — slight scope shifts, new variants, extended capabilities. This is NOT about current code quality (that's deep-review's job). It asks: **if requirements change next quarter, will this code bend or break?**
+
+Scan the diff for each trigger. Run the checklist when the trigger fires. Only triggered checks appear in the output.
+
+### Assumption Fragility
+
+**Trigger**: new `switch`/`case` or `if/else if` chains on types/enums/strings, hardcoded lists or maps, magic numbers, fixed-size arrays for domain concepts, string-matched constants.
+
+- Hardcoded values that would require a code change if a new variant is added? (e.g., `if role == "admin" || role == "editor"` instead of checking against a role set)
+- Implicit cardinality assumptions? (e.g., "there's always exactly one X", single-element destructuring)
+- `switch` without `default` or exhaustiveness check on values that could grow?
+- Magic numbers or thresholds embedded in logic without named constants or configuration?
+- String-matched identifiers that would silently fail if the source value changes? (e.g., `if name == "prod-cluster"`)
+
+### Extension Cost
+
+**Trigger**: new domain types/interfaces/structs, new API endpoints or handlers, new enum values or union types, new conditional branches based on business concepts.
+
+- If this feature needed one more variant/option/mode, how many files would change? Flag if > 3.
+- Is new behavior added through extension (new implementations, new handlers) or by modifying existing code paths (adding branches to existing functions)?
+- Are there parallel structures (multiple places that must stay in sync when a variant is added)? Flag if the same concept is listed in > 2 places.
+- Could a new case be added without modifying existing passing tests?
+
+### Data Model Flexibility
+
+**Trigger**: new DB columns/tables, schema migrations, new struct/type definitions with validation, CRD schema changes, API request/response shape changes.
+
+- Closed enums used for concepts that are inherently open-ended? (e.g., `type: "email" | "sms"` for a notification channel that will likely grow)
+- Required fields without defaults that would force a migration for every extension?
+- Rigid validation that rejects unknown fields, preventing additive evolution?
+- Schema tightly coupled to a single use case, or general enough for adjacent ones?
+
+### Configuration vs. Code
+
+**Trigger**: new thresholds, limits, timeouts, feature lists, display text, URLs, retry counts, batch sizes, or policy decisions embedded in source code.
+
+- Values likely to change with business needs (limits, thresholds, feature sets) externalized to config?
+- Policy decisions (who can do what, what triggers what) expressed as data/config or hardcoded in logic?
+- Would a product manager's "just change the limit" request require a deploy?
+
+### Requirement Sensitivity ("What If" Scenarios)
+
+**Trigger**: always runs when any other Tier 3 check is triggered.
+
+Generate 2-3 plausible "what if" scenarios based on what the PR actually does. For each, assess the change effort.
+
+Examples of good scenarios:
+- "What if this list grows from 3 items to 30?"
+- "What if this needs to support a second provider/backend?"
+- "What if this feature becomes user-configurable instead of admin-only?"
+- "What if this needs to work across multiple tenants/namespaces?"
+- "What if the current synchronous flow needs to become async?"
+
+For each scenario, classify:
+- **Config change**: no code change needed, just config/env update
+- **Small addition**: a new file or a few lines in 1-2 files, no architectural change
+- **Moderate change**: touches 3-5 files, may need new interfaces or abstractions
+- **Significant rewrite**: architectural change, new patterns, broad refactoring required
+
+Flag any scenario rated "Significant rewrite" that represents a plausible near-term requirement.
+
+### Coupling to Current Requirements
+
+**Trigger**: new business logic, new workflow steps, new conditional paths based on business rules, feature flag implementations.
+
+- Does the code encode the current requirement literally, or the pattern behind it?
+- Business logic mixed into infrastructure/transport/UI layers where it can't be reused or independently evolved?
+- Feature flags that are temporary but lack a removal path (no cleanup TODO, no expiry)?
+- Domain concepts spread across layers (same business rule enforced in UI, API, and DB) without a single source of truth?
+
+---
+
 ## Output Format
 
 ```markdown
@@ -238,6 +312,23 @@ Scan the diff for each trigger. Run the checklist when the trigger fires. Only t
 
 #### [Domain name]
 [Findings with file:line references, or "Looks good"]
+
+### Tier 3: Evolvability
+
+*(Only triggered checks appear here. Omit entire section if no Tier 3 triggers fire.)*
+
+**Assumption Fragility**: [findings, or "No fragile assumptions detected"]
+**Extension Cost**: [findings, or "Changes are well-isolated"]
+**Data Model Flexibility**: [findings, or "Schema accommodates growth"]
+**Configuration vs. Code**: [findings, or "Tunable values externalized"]
+**Coupling to Current Requirements**: [findings, or "Logic is pattern-based, not literal"]
+
+#### "What If" Scenarios
+
+| Scenario | Impact | Effort |
+|----------|--------|--------|
+| [plausible evolution] | [what changes] | Config / Small / Moderate / Significant |
+| [plausible evolution] | [what changes] | Config / Small / Moderate / Significant |
 
 ### Verdict
 - ✅ **No concerns**
