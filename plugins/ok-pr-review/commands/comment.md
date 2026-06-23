@@ -1,6 +1,6 @@
 ---
 description: Prepare and optionally post review comments to GitHub
-argument-hint: [pr-url | owner/repo#number]
+argument-hint: <pr-url | owner/repo#number>
 model: sonnet
 allowed-tools:
   - Bash
@@ -21,12 +21,13 @@ Aggregate review findings, compose final comment text, and (when the user explic
 
 Input: {{args}}
 
-Accepts an optional argument: `<pr-url | owner/repo#number>`.
+Accept:
+- GitHub URL: `https://github.com/owner/repo/pull/123`
+- Shorthand: `owner/repo#123`
 
-- **With argument**: use the specified PR.
-- **No argument**: default to the latest reviewed PR in this conversation. Find the most recent `STANDARD_REVIEW_COMPLETE: <owner>/<repo>#<number>` marker in conversation history and use that PR.
+Parse `owner`, `repo`, and `number` from the input.
 
-Then look for findings files in `$HOME/.claude/ok-pr-review/repos/{owner}/{repo}/`:
+Look for findings files in `$HOME/.claude/ok-pr-review/repos/{owner}/{repo}/`:
 - `{pr-number}-summary.md` - pre-flight summary (may not exist)
 - `{pr-number}-review.md` - standard review findings
 - `{pr-number}-deep-review.md` - deep review findings (may not exist)
