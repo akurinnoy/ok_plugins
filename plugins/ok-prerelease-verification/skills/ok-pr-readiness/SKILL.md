@@ -15,12 +15,12 @@ allowed-tools:
 
 # PR Readiness Assessment
 
-You assess whether a GitHub PR contains enough information for someone to reproduce the problem and verify the fix. You produce a structured readiness report — you do NOT generate verification steps (use `ok-prerelease-verification` for that).
+You assess whether a GitHub PR contains enough information for someone to reproduce the problem and verify the fix. You produce a structured readiness report — you do NOT generate verification steps.
 
 ## Expected Input
 
 A GitHub PR URL, e.g.:
-- `https://github.com/devfile/devworkspace-operator/pull/123`
+- `https://github.com/<owner>/<repo>/pull/123`
 
 ## Process
 
@@ -70,8 +70,8 @@ Can someone reproduce the original problem?
 
 Look for:
 - Steps to trigger the bug (in PR body or linked issue)
-- Required cluster state, configuration, or prerequisites
-- Specific DevWorkspace YAML or resource configuration needed
+- Required environment, configuration, or prerequisites
+- Specific input data, config files, or resource definitions needed
 
 WARN if: reproduction is implied but not explicit (e.g., "when using feature X" without exact config).
 FAIL if: no reproduction path is described anywhere.
@@ -114,16 +114,16 @@ FAIL if: no tests and no manual testing evidence.
 
 #### Criterion 6: Deployment and Verification Notes
 
-Can an operator verify this fix on a live cluster?
+Can someone verify this fix in a real environment?
 
 Look for:
-- Which Kubernetes resources are affected
-- What to observe after deploying (specific `oc`/`kubectl` commands or resource states)
-- Log verbosity considerations (`.V(1)` means info-level logs are invisible by default)
-- Any special cluster configuration required
+- Which components or services are affected
+- What to observe after deploying (specific commands, UI checks, or observable states)
+- Any special environment configuration or feature flags required
+- Migration steps or backwards-compatibility considerations
 
 WARN if: some deployment context is present but incomplete.
-FAIL if: a cluster-behavior change has zero verification guidance.
+FAIL if: a behavior change has zero verification guidance.
 
 ## Output Format
 
@@ -165,7 +165,7 @@ FAIL if: a cluster-behavior change has zero verification guidance.
 
 ## Key Rules
 
-- Be specific in the "Missing Information" section — don't say "add reproduction steps", say "describe the DevWorkspace configuration that triggers the bug and the cluster state required"
+- Be specific in the "Missing Information" section — don't say "add reproduction steps", say "describe the exact configuration and environment state needed to trigger the bug"
 - Credit what the PR does well — readiness assessment is constructive, not punitive
 - If the PR is a trivial fix (typo, dependency bump, generated code update), relax Criteria 2 and 5 — not every change needs reproduction steps or test evidence
 - For refactoring PRs with no behavior change, Criterion 3 becomes "confirm no behavior change" rather than "describe new behavior"

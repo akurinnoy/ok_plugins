@@ -23,10 +23,10 @@ The output is designed to be executed manually in your terminal against a cluste
 
 ### ok-pr-readiness
 
-Assesses whether a GitHub PR has sufficient information to reproduce and verify its changes. Produces a structured readiness report with pass/fail verdicts.
+Assesses whether any GitHub PR has sufficient information to reproduce and verify its changes. Produces a structured readiness report with pass/fail verdicts. Works with any repository.
 
 ```
-/ok-pr-readiness https://github.com/devfile/devworkspace-operator/pull/123
+/ok-pr-readiness https://github.com/<owner>/<repo>/pull/123
 ```
 
 Given a PR URL, the skill:
@@ -35,8 +35,6 @@ Given a PR URL, the skill:
 2. Evaluates 6 readiness criteria: problem statement, reproduction steps, expected behavior, scope of changes, test evidence, and deployment notes
 3. Assigns PASS / WARN / FAIL per criterion
 4. Produces an overall verdict (READY / NEEDS WORK / NOT READY) with actionable feedback
-
-Use this before `ok-prerelease-verification` — if the PR lacks key information, verification instructions will have gaps.
 
 ## Installation
 
