@@ -1,7 +1,7 @@
 ---
 description: Study a repository and write a domain profile
 argument-hint: <repo-url | owner/repo>
-model: sonnet
+model: claude-sonnet-4-6
 allowed-tools:
   - Bash
   - Read

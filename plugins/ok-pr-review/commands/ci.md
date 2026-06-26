@@ -1,7 +1,7 @@
 ---
 description: Non-interactive PR review for CI pipelines - runs full review flow and posts comments automatically
 argument-hint: <pr-url | owner/repo#number>
-model: opus
+model: claude-opus-4-6
 allowed-tools:
   - Bash
   - Read

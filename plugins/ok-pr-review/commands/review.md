@@ -1,7 +1,7 @@
 ---
 description: Standard pull request code review
 argument-hint: <pr-url | owner/repo#number>
-model: opus
+model: claude-opus-4-6
 allowed-tools:
   - Read
   - Glob
