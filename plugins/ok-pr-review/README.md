@@ -45,22 +45,31 @@ Review artifacts are stored at `~/.claude/ok-pr-review/repos/{owner}/{repo}/`:
 
 This path is stable across plugin updates.
 
-## CI / Non-Interactive Mode
+## CI Workflow (Non-Interactive)
 
-Set `OK_PR_REVIEW_AUTO_POST=true` to skip the interactive approval prompt and submit the review directly.
+The `ci` workflow runs the full review pipeline deterministically and posts comments to GitHub automatically. No user interaction needed.
 
-In CI mode, the `comment` command:
-- Matches findings against the PR diff to create inline comments on specific code lines
-- Submits the review immediately with `COMMENT` action (not a pending draft)
-- Findings that can't be matched to a specific line go in the review body
-
-```bash
-export OK_PR_REVIEW_AUTO_POST=true
-claude -p "/ok-pr-review:review https://github.com/org/repo/pull/123" && \
-claude -p "/ok-pr-review:comment org/repo#123"
+```
+fetch → summary → review → deep-review + impact (parallel) → post comments
 ```
 
-Without this env var, the `comment` command shows prepared comments and waits for explicit user approval before posting.
+Invoke via the Workflow tool or from a CI pipeline:
+
+```bash
+claude -p "Run the ci workflow for owner/repo#123"
+```
+
+The workflow:
+- Fetches all PR data upfront (deterministic, not agent-driven)
+- Runs all review stages in order with parallel deep-review + impact
+- Auto-posts comments to GitHub as a submitted review
+- Returns a structured verdict
+
+A PreToolUse hook prevents review agents from modifying source code — they can only write findings files.
+
+### Interactive Mode
+
+For interactive reviews with scope decisions and comment approval, use the `flow` skill or invoke individual commands manually.
 
 ## Installation
 

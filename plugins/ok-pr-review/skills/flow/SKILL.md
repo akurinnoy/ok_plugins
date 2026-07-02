@@ -140,3 +140,4 @@ Only run if the user explicitly confirms.
 - Deep-review and impact CAN run in parallel with each other (both depend only on the standard review, not on each other).
 - The `simplify` subagent CAN run in parallel with deep-review/impact since it operates independently.
 - Never re-invoke a command that already completed in this conversation — the markers prevent duplicate runs.
+- **For CI/non-interactive use**, use the `ci` workflow instead — it runs the full pipeline deterministically with auto-posting.
