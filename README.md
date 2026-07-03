@@ -17,7 +17,7 @@ Custom Claude Code plugin marketplace by akurinnoy.
 In Claude Code, run:
 
 ```
-/plugin marketplace add
+/plugin marketplace add https://github.com/akurinnoy/ok_plugins
 ```
 
 Select "GitHub repository" and enter `akurinnoy/ok_plugins`.
