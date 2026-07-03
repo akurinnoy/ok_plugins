@@ -67,9 +67,17 @@ The workflow:
 
 A PreToolUse hook prevents review agents from modifying source code — they can only write findings files.
 
-### Interactive Mode
+### Interactive Mode (flow workflow)
 
-For interactive reviews with scope decisions and comment approval, use the `flow` skill or invoke individual commands manually.
+The `flow` workflow runs the review pipeline with intelligent scope decisions and produces a draft without posting:
+
+```
+fetch → summary (+ scope decision) → review → deep-review + impact (if warranted) → draft
+```
+
+The summary agent decides whether to run deep-review and/or impact based on PR size and content. After the workflow completes, review the draft and post via `/ok-pr-review:comment`.
+
+You can also invoke individual commands manually for ad-hoc use.
 
 ## Installation
 
