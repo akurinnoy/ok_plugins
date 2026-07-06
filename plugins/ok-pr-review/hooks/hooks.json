@@ -1,0 +1,27 @@
+{
+  "description": "Prevent review agents from modifying source code. Agents may only write to the ok-pr-review findings directory.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"permissionDecision\":\"deny\"},\"systemMessage\":\"Review agents must not modify source code. Use Write to save findings to $HOME/.claude/ok-pr-review/ only.\"}' >&2; exit 2",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-write-path.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
