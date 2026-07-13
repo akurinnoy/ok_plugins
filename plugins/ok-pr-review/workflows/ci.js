@@ -1,12 +1,12 @@
 export const meta = {
   name: 'ci',
-  description: 'Full non-interactive PR review pipeline: fetch, summary, review, deep-review + impact, post comments',
+  description: 'Full non-interactive PR review pipeline: fetch, summary, scoped review, deep-review + impact, post comments',
   whenToUse: 'When running a CI review pipeline, non-interactive full PR review, or automated review with auto-post',
   phases: [
     { title: 'Fetch', detail: 'Fetch PR data and resolve identity' },
-    { title: 'Summary', detail: 'Pre-flight orientation', model: 'claude-sonnet-4-6' },
+    { title: 'Summary', detail: 'Pre-flight orientation and scope decision', model: 'claude-sonnet-4-6' },
     { title: 'Review', detail: 'Standard code review', model: 'claude-opus-4-6' },
-    { title: 'Deep Analysis', detail: 'Deep review + impact in parallel', model: 'claude-opus-4-6' },
+    { title: 'Deep Analysis', detail: 'Deep review + impact (conditional, parallel)', model: 'claude-opus-4-6' },
     { title: 'Post', detail: 'Aggregate findings and post to GitHub', model: 'claude-sonnet-4-6' },
   ],
 }
@@ -18,8 +18,18 @@ const SUMMARY_SCHEMA = {
     keyAreas: { type: 'array', items: { type: 'string' } },
     risks: { type: 'array', items: { type: 'string' } },
     perspective: { type: 'string', enum: ['reviewer', 'author'] },
+    changedFiles: { type: 'integer' },
+    scope: {
+      type: 'object',
+      properties: {
+        runDeepReview: { type: 'boolean' },
+        runImpact: { type: 'boolean' },
+        reason: { type: 'string' },
+      },
+      required: ['runDeepReview', 'runImpact', 'reason'],
+    },
   },
-  required: ['summary', 'keyAreas', 'risks', 'perspective'],
+  required: ['summary', 'keyAreas', 'risks', 'perspective', 'changedFiles', 'scope'],
 }
 
 const REVIEW_SCHEMA = {
@@ -107,7 +117,7 @@ var fetchResult = await agent(
 
 log('Fetch complete')
 
-// ── Phase 2: Summary ────────────────────────────────────────────────────────
+// ── Phase 2: Summary + Scope Decision ─────────────────────────────────────
 phase('Summary')
 
 var summaryResult = await agent(
@@ -124,12 +134,25 @@ var summaryResult = await agent(
   '2. Key Review Areas: Where should a reviewer focus? One bullet per area.\n' +
   '3. Potential Risks: List every risk. Be thorough. One bullet per risk.\n\n' +
   'Keep it brief. No implementation details. No code analysis.\n\n' +
+  'Also decide the review scope for CI. Apply these rules:\n' +
+  '- Small PR (< ~5 files), single concern, no security/ops changes: runDeepReview=false, runImpact=false\n' +
+  '- Medium PR, multiple areas or test changes: runDeepReview=true, runImpact=false\n' +
+  '- Large PR, security-sensitive, RBAC/permissions, API changes: runDeepReview=true, runImpact=false\n' +
+  '- Infrastructure, deployment, operator config, supply chain changes: runDeepReview=false, runImpact=true\n' +
+  '- Large + security + infrastructure: runDeepReview=true, runImpact=true\n' +
+  'Provide a one-sentence reason for your scope decision.\n\n' +
+  'Set changedFiles to the number of files changed in the PR.\n\n' +
   'Also write the full summary to: ' + reposDir + '/' + number + '-summary.md',
   { label: 'summary', phase: 'Summary', model: 'claude-sonnet-4-6', schema: SUMMARY_SCHEMA }
 )
 
 log('Summary: ' + summaryResult.summary)
 log('Risks identified: ' + summaryResult.risks.length)
+log('CI scope decision: ' +
+  (summaryResult.scope.runDeepReview && summaryResult.scope.runImpact ? 'review + deep-review + impact' :
+   summaryResult.scope.runDeepReview ? 'review + deep-review' :
+   summaryResult.scope.runImpact ? 'review + impact' : 'review only') +
+  ' (' + summaryResult.changedFiles + ' files, ' + summaryResult.scope.reason + ')')
 
 // ── Phase 3: Standard Review ────────────────────────────────────────────────
 phase('Review')
@@ -165,11 +188,16 @@ var reviewResult = await agent(
 
 log('Review verdict: ' + reviewResult.verdict + ' (critical: ' + reviewResult.criticalCount + ', warnings: ' + reviewResult.warningCount + ')')
 
-// ── Phase 4: Deep Analysis (parallel) ───────────────────────────────────────
+// ── Phase 4: Deep Analysis (conditional, parallel) ────────────────────────
 phase('Deep Analysis')
 
-var deepResults = await parallel([
-  function() {
+var deepReview = null
+var impactReview = null
+
+var deepAgents = []
+
+if (summaryResult.scope.runDeepReview) {
+  deepAgents.push(function() {
     return agent(
       'You are conducting a deep design quality review of a PR that already received a standard review.\n\n' +
       'PR: ' + owner + '/' + repo + '#' + number + '\n\n' +
@@ -192,8 +220,11 @@ var deepResults = await parallel([
       'Return a brief text summary of your key findings.',
       { label: 'deep-review', phase: 'Deep Analysis', model: 'claude-opus-4-6' }
     )
-  },
-  function() {
+  })
+}
+
+if (summaryResult.scope.runImpact) {
+  deepAgents.push(function() {
     return agent(
       'You are reviewing a PR for system-level concerns: operational readiness, security posture, supply chain, compatibility.\n\n' +
       'PR: ' + owner + '/' + repo + '#' + number + '\n\n' +
@@ -217,14 +248,17 @@ var deepResults = await parallel([
       'Return a brief text summary of your key findings.',
       { label: 'impact', phase: 'Deep Analysis', model: 'claude-opus-4-6' }
     )
-  },
-])
+  })
+}
 
-var deepReview = deepResults[0]
-var impactReview = deepResults[1]
-
-log('Deep review: ' + (deepReview ? 'complete' : 'skipped'))
-log('Impact review: ' + (impactReview ? 'complete' : 'skipped'))
+if (deepAgents.length > 0) {
+  var results = await parallel(deepAgents)
+  deepReview = summaryResult.scope.runDeepReview ? results[0] : null
+  impactReview = summaryResult.scope.runImpact ? (summaryResult.scope.runDeepReview ? results[1] : results[0]) : null
+  log('Deep analysis complete')
+} else {
+  log('Deep analysis skipped (small PR, single concern)')
+}
 
 // ── Phase 5: Post Comments ──────────────────────────────────────────────────
 phase('Post')
@@ -269,11 +303,12 @@ log('Posted: ' + postResult.inlineComments + ' inline, ' + postResult.generalCom
 return {
   pr: owner + '/' + repo + '#' + number,
   summary: summaryResult.summary,
+  scope: summaryResult.scope,
   verdict: reviewResult.verdict,
   criticalIssues: reviewResult.criticalCount,
   warnings: reviewResult.warningCount,
   suggestions: reviewResult.suggestionCount,
-  deepReview: deepReview ? 'complete' : 'skipped',
-  impactReview: impactReview ? 'complete' : 'skipped',
+  deepReview: summaryResult.scope.runDeepReview ? (deepReview ? 'complete' : 'failed') : 'skipped',
+  impactReview: summaryResult.scope.runImpact ? (impactReview ? 'complete' : 'failed') : 'skipped',
   commentsPosted: postResult.inlineComments + postResult.generalComments,
 }
