@@ -27,7 +27,7 @@ Short name mapping:
 - `opus` → `claude-opus-4.6`
 - `fable` → `fable-sonnet5`
 - `gemini` → `gemini-3.1-pro`
-- `gpt` → `gpt-5.3-codex`
+- `gpt` → `gpt-5.4`
 - `grok` → `grok-4.5`
 
 ## Process
@@ -56,7 +56,7 @@ Which model(s) do you agree with for this query?
 1. claude-opus-4.6
 2. fable-sonnet5
 3. gemini-3.1-pro
-4. gpt-5.3-codex
+4. gpt-5.4
 5. grok-4.5
 ```
 

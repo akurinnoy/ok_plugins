@@ -1,6 +1,6 @@
 export const meta = {
   name: "llm-council-crossmodel",
-  description: "5-model LLM Council: Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.3 Codex, Grok 4.5",
+  description: "5-model LLM Council: Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.4, Grok 4.5",
   phases: [
     { title: "Preflight", detail: "Verify required CLI tools are installed" },
     { title: "First Opinions", detail: "All 5 models answer independently in parallel" },
@@ -109,7 +109,7 @@ const MODEL_REGISTRY = [
   { name: "claude-opus-4.6", provider: "anthropic", version: "claude-opus-4-6[1m]" },
   { name: "fable-sonnet5", provider: "anthropic", version: "claude-sonnet-5-thinking-high" },
   { name: "gemini-3.1-pro", provider: "google", version: "gemini-3.1-pro-preview" },
-  { name: "gpt-5.3-codex", provider: "openai", version: "gpt-5.3-codex" },
+  { name: "gpt-5.4", provider: "openai", version: "gpt-5.4-high" },
   { name: "grok-4.5", provider: "xai", version: "cursor-grok-4.5-high" }
 ]
 
@@ -131,18 +131,18 @@ const claudePrompt = [
 ].join("\n");
 
 const geminiCliCommand = "gemini -y --skip-trust -m gemini-3.1-pro-preview -p -";
-const cursorGptCliCommand = "agent --yolo --trust --model gpt-5.3-codex -p -";
+const cursorGptCliCommand = "agent --yolo --trust --model gpt-5.4-high -p -";
 const cursorFableCliCommand = "agent --yolo --trust --model claude-sonnet-5-thinking-high -p -";
 const cursorGrokCliCommand = "agent --yolo --trust --model cursor-grok-4.5-high -p -";
 
 phase("First Opinions")
-log("Querying Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.3 Codex, and Grok 4.5 in parallel...")
+log("Querying Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.4, and Grok 4.5 in parallel...")
 
 const phase1 = await parallel([
   () => agent(claudePrompt, { label: "claude-opus", phase: "First Opinions" }),
   () => agent(buildShellRunnerPrompt(cursorFableCliCommand, claudePrompt), { label: "fable-sonnet5", phase: "First Opinions" }),
   () => agent(buildShellRunnerPrompt(geminiCliCommand, claudePrompt), { label: "gemini-3.1-pro", phase: "First Opinions" }),
-  () => agent(buildShellRunnerPrompt(cursorGptCliCommand, claudePrompt), { label: "gpt-5.3-codex", phase: "First Opinions" }),
+  () => agent(buildShellRunnerPrompt(cursorGptCliCommand, claudePrompt), { label: "gpt-5.4", phase: "First Opinions" }),
   () => agent(buildShellRunnerPrompt(cursorGrokCliCommand, claudePrompt), { label: "grok-4.5", phase: "First Opinions" })
 ])
 
@@ -233,7 +233,7 @@ const distillationPrompt = [
   "**gemini-3.1-pro:**",
   geminiResponse || "(no response - model failed)",
   "",
-  "**gpt-5.3-codex:**",
+  "**gpt-5.4:**",
   cursorResponse || "(no response - model failed)",
   "",
   "**grok-4.5:**",
@@ -296,7 +296,7 @@ const phase2 = await parallel([
               },
               required: ["position", "reasoning", "failed"]
             },
-            "gpt-5.3-codex": {
+            "gpt-5.4": {
               type: "object",
               properties: {
                 position: { type: "string" },
@@ -315,7 +315,7 @@ const phase2 = await parallel([
               required: ["position", "reasoning", "failed"]
             }
           },
-          required: ["claude-opus-4.6", "fable-sonnet5", "gemini-3.1-pro", "gpt-5.3-codex", "grok-4.5"]
+          required: ["claude-opus-4.6", "fable-sonnet5", "gemini-3.1-pro", "gpt-5.4", "grok-4.5"]
         }
       },
       required: ["query_domain", "models"]
@@ -343,7 +343,7 @@ const scorePrompt = [
   "Response " + anonMap["Claude"] + " = claude-opus-4.6",
   "Response " + anonMap["Fable"] + " = fable-sonnet5",
   "Response " + anonMap["Gemini"] + " = gemini-3.1-pro",
-  "Response " + anonMap["Cursor/GPT"] + " = gpt-5.3-codex",
+  "Response " + anonMap["Cursor/GPT"] + " = gpt-5.4",
   "Response " + anonMap["Grok"] + " = grok-4.5",
   "",
   "## Review by claude-opus-4.6:",
@@ -355,7 +355,7 @@ const scorePrompt = [
   "## Review by gemini-3.1-pro:",
   geminiReview || "(review failed)",
   "",
-  "## Review by gpt-5.3-codex:",
+  "## Review by gpt-5.4:",
   cursorReview || "(review failed)",
   "",
   "## Review by grok-4.5:",
@@ -404,7 +404,7 @@ const scores = await agent(scorePrompt, {
             },
             required: ["accuracy", "insight"]
           },
-          "gpt-5.3-codex": {
+          "gpt-5.4": {
             type: ["object", "null"],
             properties: {
               accuracy: { type: "array", items: { type: ["integer", "null"] } },
@@ -421,7 +421,7 @@ const scores = await agent(scorePrompt, {
             required: ["accuracy", "insight"]
           }
         },
-        required: ["claude-opus-4.6", "fable-sonnet5", "gemini-3.1-pro", "gpt-5.3-codex", "grok-4.5"]
+        required: ["claude-opus-4.6", "fable-sonnet5", "gemini-3.1-pro", "gpt-5.4", "grok-4.5"]
       },
       strongest_picks: {
         type: "object",
@@ -429,10 +429,10 @@ const scores = await agent(scorePrompt, {
           "claude-opus-4.6": { type: ["string", "null"] },
           "fable-sonnet5": { type: ["string", "null"] },
           "gemini-3.1-pro": { type: ["string", "null"] },
-          "gpt-5.3-codex": { type: ["string", "null"] },
+          "gpt-5.4": { type: ["string", "null"] },
           "grok-4.5": { type: ["string", "null"] }
         },
-        required: ["claude-opus-4.6", "fable-sonnet5", "gemini-3.1-pro", "gpt-5.3-codex", "grok-4.5"]
+        required: ["claude-opus-4.6", "fable-sonnet5", "gemini-3.1-pro", "gpt-5.4", "grok-4.5"]
       }
     },
     required: ["scores", "strongest_picks"]
@@ -442,7 +442,7 @@ const scores = await agent(scorePrompt, {
 // ── Phase 3: Chairman Synthesis ─────────────────────────────────────────────
 
 const chairmanPrompt = [
-  "You are the Chairman of a 5-model LLM Council. Five different AI models (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.3 Codex, Grok 4.5) answered a question independently, then peer-reviewed each other anonymously.",
+  "You are the Chairman of a 5-model LLM Council. Five different AI models (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.4, Grok 4.5) answered a question independently, then peer-reviewed each other anonymously.",
   "",
   "Your job: synthesize everything into a clear, actionable verdict.",
   "",
@@ -461,7 +461,7 @@ const chairmanPrompt = [
   "**Gemini (gemini-3.1-pro-preview):**",
   geminiResponse,
   "",
-  "**Cursor/GPT (gpt-5.3-codex):**",
+  "**Cursor/GPT (gpt-5.4):**",
   cursorResponse,
   "",
   "**Grok (grok-4.5):**",
@@ -529,7 +529,7 @@ const chairmanSourcePrompt = [
   "**claude-opus-4.6:** " + (distillation.models["claude-opus-4.6"].position || "(failed)"),
   "**fable-sonnet5:** " + (distillation.models["fable-sonnet5"].position || "(failed)"),
   "**gemini-3.1-pro:** " + (distillation.models["gemini-3.1-pro"].position || "(failed)"),
-  "**gpt-5.3-codex:** " + (distillation.models["gpt-5.3-codex"].position || "(failed)"),
+  "**gpt-5.4:** " + (distillation.models["gpt-5.4"].position || "(failed)"),
   "**grok-4.5:** " + (distillation.models["grok-4.5"].position || "(failed)"),
   "",
   "Return the list of model names whose positions materially influenced the synthesis."
@@ -640,7 +640,7 @@ var logWriterPrompt = [
   "```",
   "",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/gpt-5.3-codex.md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/gpt-5.4.md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
   (cursorResponse || ""),
   "__COUNCIL_RESPONSE_7f3a9e2__",
   "```",
@@ -672,7 +672,7 @@ var logWriterPrompt = [
     "claude-opus-4.6": claudeReview || null,
     "fable-sonnet5": fableReview || null,
     "gemini-3.1-pro": geminiReview || null,
-    "gpt-5.3-codex": cursorReview || null,
+    "gpt-5.4": cursorReview || null,
     "grok-4.5": grokReview || null
   }),
   "__COUNCIL_REVIEW_7f3a9e2__",
@@ -697,6 +697,6 @@ return [
   "",
   "---",
   "",
-  "*Council composition: Claude Opus 4.6, Fable (Sonnet 5), Gemini 3.1 Pro (gemini-3.1-pro-preview), GPT-5.3 Codex, Grok 4.5*",
+  "*Council composition: Claude Opus 4.6, Fable (Sonnet 5), Gemini 3.1 Pro (gemini-3.1-pro-preview), GPT-5.4, Grok 4.5*",
   "*Anonymization mapping: Claude=" + anonMap["Claude"] + ", Fable=" + anonMap["Fable"] + ", Gemini=" + anonMap["Gemini"] + ", Cursor/GPT=" + anonMap["Cursor/GPT"] + ", Grok=" + anonMap["Grok"] + "*"
 ].join("\n");

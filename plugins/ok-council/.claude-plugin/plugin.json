@@ -1,7 +1,7 @@
 {
   "name": "ok-council",
   "version": "1.2.0",
-  "description": "5-model LLM Council: Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.3 Codex, Grok 4.5 — independent answers, anonymous peer review, synthesized verdict, structured logging",
+  "description": "5-model LLM Council: Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.4, Grok 4.5 — independent answers, anonymous peer review, synthesized verdict, structured logging",
   "author": {
     "name": "Oleksii Kurinnyi"
   }
