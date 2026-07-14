@@ -1,11 +1,11 @@
 ---
 name: llm-council-crossmodel
-description: "Run a query through a 4-model LLM Council (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.3 Codex). Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
+description: "Run a query through a 5-model LLM Council (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.4, Grok 4.5). Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
 ---
 
 # LLM Council — Cross-Model
 
-A multi-model council that runs your question through four genuinely different LLMs, has them peer-review each other anonymously, and synthesizes a verdict. The diversity comes from different model architectures and training data, not from prompting the same model with different thinking lenses.
+A multi-model council that runs your question through five genuinely different LLMs, has them peer-review each other anonymously, and synthesizes a verdict. The diversity comes from different model architectures and training data, not from prompting the same model with different thinking lenses.
 
 ## Prerequisites
 
@@ -25,7 +25,8 @@ Before the workflow runs, it verifies both tools are available and reports any t
 | Claude | Opus 4.6 | Native `agent()` call |
 | Fable | Sonnet 5 (claude-sonnet-5-thinking-high) | `agent --yolo --trust --model claude-sonnet-5-thinking-high -p "..."` via Bash |
 | Gemini | gemini-3.1-pro-preview | `gemini -y --skip-trust -m gemini-3.1-pro-preview -p "..."` via Bash |
-| Cursor/GPT | gpt-5.3-codex | `agent --yolo --trust --model gpt-5.3-codex -p "..."` via Bash |
+| Cursor/GPT | gpt-5.4-high | `agent --yolo --trust --model gpt-5.4-high -p "..."` via Bash |
+| Grok | grok-4.5 (cursor-grok-4.5-high) | `agent --yolo --trust --model cursor-grok-4.5-high -p "..."` via Bash |
 
 ## How to invoke
 
