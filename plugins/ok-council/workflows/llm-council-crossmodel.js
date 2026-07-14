@@ -113,9 +113,14 @@ const MODEL_REGISTRY = [
   { name: "grok-4.5", provider: "xai", version: "cursor-grok-4.5-high" }
 ]
 
-// ── Phase 1: First Opinions (parallel) ──────────────────────────────────────
+// ── Args parsing ────────────────────────────────────────────────────────────
 
-const query = args;
+const fullMode = typeof args === "string" && args.indexOf("--full") !== -1
+const query = typeof args === "string" ? args.replace(/--full\s*/g, "").trim() : args
+
+log("Review mode: " + (fullMode ? "full (5/5 reviewers)" : "simple (3/5 reviewers)"))
+
+// ── Phase 1: First Opinions (parallel) ──────────────────────────────────────
 
 const claudePrompt = [
   "A user has brought this question to a multi-model council. You are one of five models answering independently.",
@@ -252,13 +257,26 @@ const distillationPrompt = [
 phase("Review & Distill")
 log("Running anonymous cross-review + position distillation (mapping: Claude=" + anonMap["Claude"] + ", Fable=" + anonMap["Fable"] + ", Gemini=" + anonMap["Gemini"] + ", Cursor/GPT=" + anonMap["Cursor/GPT"] + ", Grok=" + anonMap["Grok"] + ")")
 
-const phase2 = await parallel([
-  () => agent(reviewPrompt, { label: "claude-review", phase: "Review & Distill" }),
-  () => agent(buildShellRunnerPrompt(cursorFableCliCommand, reviewPrompt), { label: "fable-review", phase: "Review & Distill" }),
-  () => agent(buildShellRunnerPrompt(geminiCliCommand, reviewPrompt), { label: "gemini-review", phase: "Review & Distill" }),
-  () => agent(buildShellRunnerPrompt(cursorGptCliCommand, reviewPrompt), { label: "cursor-review", phase: "Review & Distill" }),
-  () => agent(buildShellRunnerPrompt(cursorGrokCliCommand, reviewPrompt), { label: "grok-review", phase: "Review & Distill" }),
-  () => agent(distillationPrompt, {
+const allReviewers = [
+  { model: "claude-opus-4.6", fn: function() { return agent(reviewPrompt, { label: "claude-review", phase: "Review & Distill" }) } },
+  { model: "fable-sonnet5", fn: function() { return agent(buildShellRunnerPrompt(cursorFableCliCommand, reviewPrompt), { label: "fable-review", phase: "Review & Distill" }) } },
+  { model: "gemini-3.1-pro", fn: function() { return agent(buildShellRunnerPrompt(geminiCliCommand, reviewPrompt), { label: "gemini-review", phase: "Review & Distill" }) } },
+  { model: "gpt-5.4", fn: function() { return agent(buildShellRunnerPrompt(cursorGptCliCommand, reviewPrompt), { label: "cursor-review", phase: "Review & Distill" }) } },
+  { model: "grok-4.5", fn: function() { return agent(buildShellRunnerPrompt(cursorGrokCliCommand, reviewPrompt), { label: "grok-review", phase: "Review & Distill" }) } }
+]
+
+var reviewerCount = fullMode ? allReviewers.length : 3
+var reviewerOffset = query.length % allReviewers.length
+var selectedReviewers = []
+for (var ri = 0; ri < reviewerCount; ri++) {
+  selectedReviewers.push(allReviewers[(reviewerOffset + ri) % allReviewers.length])
+}
+
+log("Selected reviewers: " + selectedReviewers.map(function(r) { return r.model }).join(", "))
+
+var reviewThunks = selectedReviewers.map(function(r) { return r.fn })
+reviewThunks.push(function() {
+  return agent(distillationPrompt, {
     label: "distiller",
     phase: "Review & Distill",
     model: "sonnet",
@@ -321,23 +339,30 @@ const phase2 = await parallel([
       required: ["query_domain", "models"]
     }
   })
-])
+})
 
-const claudeReview = phase2[0];
-const fableReview = phase2[1];
-const geminiReview = phase2[2];
-const cursorReview = phase2[3];
-const grokReview = phase2[4];
-const distillation = phase2[5];
+const phase2 = await parallel(reviewThunks)
 
-log("All 5 reviews + distillation collected.")
+var reviewResults = {}
+for (var rri = 0; rri < selectedReviewers.length; rri++) {
+  reviewResults[selectedReviewers[rri].key] = phase2[rri]
+}
+const distillation = phase2[phase2.length - 1]
+
+const claudeReview = reviewResults["claude-opus-4.6"] || null;
+const fableReview = reviewResults["fable-sonnet5"] || null;
+const geminiReview = reviewResults["gemini-3.1-pro"] || null;
+const cursorReview = reviewResults["gpt-5.4"] || null;
+const grokReview = reviewResults["grok-4.5"] || null;
+
+log("Reviews collected (" + selectedReviewers.length + "/" + allReviewers.length + ") + distillation.")
 
 // ── Post-Phase 2: Score Extraction ──────────────────────────────────────────
 
 // Removed unused modelNames variable
 
 const scorePrompt = [
-  "Extract numerical scores and strongest-response picks from these five peer reviews of a 5-model LLM Council.",
+  "Extract numerical scores and strongest-response picks from the peer reviews of a 5-model LLM Council. Some models may not have reviewed (marked as 'review not performed').",
   "",
   "The reviews used anonymized response letters. Here is the de-anonymization key:",
   "Response " + anonMap["Claude"] + " = claude-opus-4.6",
@@ -347,23 +372,23 @@ const scorePrompt = [
   "Response " + anonMap["Grok"] + " = grok-4.5",
   "",
   "## Review by claude-opus-4.6:",
-  claudeReview || "(review failed)",
+  claudeReview || "(review not performed)",
   "",
   "## Review by fable-sonnet5:",
-  fableReview || "(review failed)",
+  fableReview || "(review not performed)",
   "",
   "## Review by gemini-3.1-pro:",
-  geminiReview || "(review failed)",
+  geminiReview || "(review not performed)",
   "",
   "## Review by gpt-5.4:",
-  cursorReview || "(review failed)",
+  cursorReview || "(review not performed)",
   "",
   "## Review by grok-4.5:",
-  grokReview || "(review failed)",
+  grokReview || "(review not performed)",
   "",
   "For each review that contains scores, extract the accuracy and insight scores (1-10) for each model.",
   "Use the de-anonymization key to map letter responses back to model names.",
-  "Return scores as arrays — one score per reviewer that provided scores, in order: [claude-review, fable-review, gemini-review, gpt-review, grok-review]. Use null for reviewers that failed or didn't provide scores.",
+  "Return scores as arrays — one score per reviewer that provided scores, in order: [claude-review, fable-review, gemini-review, gpt-review, grok-review]. Use null for reviewers that did not perform a review or didn't provide scores.",
   "",
   "For strongest_picks: which model did each reviewer pick as the strongest response? Map letters back to model names. Use null if the reviewer failed."
 ].join("\n");
@@ -442,7 +467,7 @@ const scores = await agent(scorePrompt, {
 // ── Phase 3: Chairman Synthesis ─────────────────────────────────────────────
 
 const chairmanPrompt = [
-  "You are the Chairman of a 5-model LLM Council. Five different AI models (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.4, Grok 4.5) answered a question independently, then peer-reviewed each other anonymously.",
+  "You are the Chairman of a 5-model LLM Council. Five different AI models (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.4, Grok 4.5) answered a question independently, then " + selectedReviewers.length + " of them peer-reviewed each other anonymously.",
   "",
   "Your job: synthesize everything into a clear, actionable verdict.",
   "",
@@ -467,23 +492,14 @@ const chairmanPrompt = [
   "**Grok (grok-4.5):**",
   grokResponse,
   "",
-  "## Anonymous Peer Reviews",
-  "",
-  "**Review 1:**",
-  claudeReview,
-  "",
-  "**Review 2:**",
-  fableReview,
-  "",
-  "**Review 3:**",
-  geminiReview,
-  "",
-  "**Review 4:**",
-  cursorReview,
-  "",
-  "**Review 5:**",
-  grokReview,
-  "",
+  "## Anonymous Peer Reviews (" + selectedReviewers.length + " of 5 models reviewed)",
+  ""
+].concat(
+  selectedReviewers.map(function(r, idx) {
+    var reviewText = reviewResults[r.model] || "(review failed)"
+    return "**Review " + (idx + 1) + " (by " + r.model + "):**\n" + reviewText + "\n"
+  })
+).concat([
   "## Anonymization Key (for your reference)",
   "Response " + anonMap["Claude"] + " = Claude",
   "Response " + anonMap["Fable"] + " = Fable",
@@ -503,7 +519,7 @@ const chairmanPrompt = [
   "[Key insights from the peer review round. What did reviewers catch that the original responses missed? Which response was rated strongest and why?]",
   "",
   "## Final Answer",
-  "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all four.]",
+  "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all five.]",
   "",
   "Be direct. Do not hedge. The whole point of the council is to give the user more clarity than any single model could provide alone."
 ].join("\n");
@@ -595,6 +611,8 @@ var logEntry = {
   query: query,
   query_domain: distillation.query_domain,
   prompt_hash: null,
+  review_mode: fullMode ? "full" : "simple",
+  reviewers: selectedReviewers.map(function(r) { return r.model }),
   models: modelMeta,
   positions: positions,
   reasoning_summaries: reasoningSummaries,
@@ -698,5 +716,6 @@ return [
   "---",
   "",
   "*Council composition: Claude Opus 4.6, Fable (Sonnet 5), Gemini 3.1 Pro (gemini-3.1-pro-preview), GPT-5.4, Grok 4.5*",
-  "*Anonymization mapping: Claude=" + anonMap["Claude"] + ", Fable=" + anonMap["Fable"] + ", Gemini=" + anonMap["Gemini"] + ", Cursor/GPT=" + anonMap["Cursor/GPT"] + ", Grok=" + anonMap["Grok"] + "*"
+  "*Anonymization mapping: Claude=" + anonMap["Claude"] + ", Fable=" + anonMap["Fable"] + ", Gemini=" + anonMap["Gemini"] + ", Cursor/GPT=" + anonMap["Cursor/GPT"] + ", Grok=" + anonMap["Grok"] + "*",
+  "*Review mode: " + (fullMode ? "full (5/5 reviewers)" : "simple (" + selectedReviewers.length + "/5 reviewers) | Use --full for all 5") + "*"
 ].join("\n");
