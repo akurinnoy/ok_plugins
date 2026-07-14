@@ -104,8 +104,133 @@ ok-council/
 │       └── SKILL.md             # Skill definition and trigger
 ├── workflows/
 │   └── llm-council-crossmodel.js  # Workflow orchestration script
+├── commands/
+│   └── stats.md                 # Stats command for pairwise model analysis
 └── README.md
 ```
+
+## Verdict Logging
+
+Each council run persists structured data to `$HOME/.claude/ok-council/logs/`:
+
+- **councils.jsonl** — one JSON record per council run, containing:
+  - `run_id`: Unique identifier for the council session
+  - `query`: The original question
+  - `timestamp`: When the council completed
+  - `models`: Array of model responses with scores and reviews
+  - `verdict`: The synthesized chairman conclusion
+
+- **responses/** — directory containing individual response files per run_id:
+  - Each run has its own subdirectory with full response transcripts
+  - Useful for auditing specific councils or debugging model behavior
+
+Example councils.jsonl entry:
+```json
+{
+  "schema_version": 1,
+  "run_id": "council-1720960245123456789",
+  "timestamp": "2026-07-14T10:30:45Z",
+  "query": "Should we use WebSockets or SSE for real-time updates?",
+  "query_domain": "architecture",
+  "prompt_hash": null,
+  "models": [
+    {
+      "name": "claude-opus-4.6",
+      "version": "claude-opus-4-6[1m]",
+      "provider": "anthropic",
+      "tokens_in": null,
+      "tokens_out": null,
+      "latency_ms": null,
+      "cost_estimate_usd": null,
+      "failed": false,
+      "failure_reason": null
+    }
+  ],
+  "positions": {
+    "claude-opus-4.6": "WebSockets are better for bidirectional communication...",
+    "fable-sonnet5": "SSE is simpler for unidirectional updates...",
+    "gemini-3.1-pro": "Consider hybrid approach...",
+    "gpt-5.3-codex": "WebSockets for real-time collaboration..."
+  },
+  "reasoning_summaries": {
+    "claude-opus-4.6": "full-duplex communication, persistent connections, binary protocol support",
+    "fable-sonnet5": "simpler implementation, HTTP-compatible, built-in reconnection"
+  },
+  "peer_scores": {
+    "claude-opus-4.6": {
+      "accuracy": [8, 7, 9, null],
+      "insight": [7, 8, 8, null]
+    }
+  },
+  "strongest_picks": {
+    "claude-opus-4.6": "fable-sonnet5",
+    "fable-sonnet5": "claude-opus-4.6"
+  },
+  "chairman_source_models": ["claude-opus-4.6", "gemini-3.1-pro"],
+  "human_verdict": null
+}
+```
+
+## Stats Command
+
+The `/ok-council:stats` command analyzes council runs and compares model performance against gold-label answers:
+
+### List recent councils
+
+```
+/ok-council:stats --list 10
+```
+
+Shows the 10 most recent council runs with their queries and verdict summaries.
+
+### Compare model performance
+
+```
+/ok-council:stats --compare
+```
+
+Runs all councils against the gold-labels.jsonl file and reports:
+- **Per-model accuracy** — how often each model's answer matched the known correct answer
+- **Verdict accuracy** — how often the synthesized verdict was correct
+- **Confidence correlations** — whether high model agreement correlates with correctness
+
+### Human spot-checks with `--review`
+
+```
+/ok-council:stats --review
+```
+
+Interactively walks through councils that disagreed with gold labels, allowing you to:
+- Confirm the gold label is correct (update your beliefs)
+- Confirm the council was right (gold label was wrong, update it)
+- Mark as uncertain and skip
+
+Useful for building confidence in the council workflow and refining gold labels over time.
+
+## Gold Labels
+
+Gold labels are a manually curated set of reference answers for council queries. Use them to:
+- Validate model performance over time
+- Detect when model quality changes (retraining, API updates)
+- Build confidence in the council process by measuring accuracy
+
+### Format
+
+Gold labels live in `$HOME/.claude/ok-council/logs/gold-labels.jsonl`. Each line is a JSON object:
+
+```json
+{"query": "Should we use WebSockets or SSE for real-time updates?", "correct_answer": "WebSockets for bidirectional, SSE for unidirectional updates", "tagged_at": "2026-07-14"}
+```
+
+### Creating and maintaining gold labels
+
+1. **After a council run**, review the verdict and decide if you agree
+2. **If confident**, add the query and your known-correct answer to gold-labels.jsonl:
+   ```bash
+   echo '{"query":"your question","correct_answer":"brief description of the right answer","tagged_at":"2026-07-14"}' >> $HOME/.claude/ok-council/logs/gold-labels.jsonl
+   ```
+3. **Run stats** to see how models performed against your labels
+4. **Review disagreements** with `/ok-council:stats --review` to refine labels or spot model drift
 
 ## Credits
 
