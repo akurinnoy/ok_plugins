@@ -588,7 +588,7 @@ var logWriterPrompt = [
   "",
   "3. Write each model's raw response to its own file:",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/claude-opus.md\" <<'RESPONSE_EOF'",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/claude-opus-4.6.md\" <<'RESPONSE_EOF'",
   shellEscape(claudeResponse || ""),
   "RESPONSE_EOF",
   "```",
