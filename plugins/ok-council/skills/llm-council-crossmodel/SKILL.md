@@ -36,6 +36,14 @@ When this skill is triggered, determine this plugin's root directory from the pa
 Workflow({ scriptPath: "<plugin-root>/workflows/llm-council-crossmodel.js", args: "<user's query>" })
 ```
 
+If the user says "full council", "thorough", or explicitly asks for all models to review, prepend `--full` to the args:
+
+```
+Workflow({ scriptPath: "<plugin-root>/workflows/llm-council-crossmodel.js", args: "--full <user's query>" })
+```
+
+By default, 3 of 5 models perform peer review (simple mode). With `--full`, all 5 review.
+
 ## When to use
 
 Use this when you want **genuine model diversity** rather than perspective diversity. Good for:
