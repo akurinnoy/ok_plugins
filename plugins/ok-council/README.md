@@ -104,6 +104,8 @@ ok-council/
 │       └── SKILL.md             # Skill definition and trigger
 ├── workflows/
 │   └── llm-council-crossmodel.js  # Workflow orchestration script
+├── commands/
+│   └── stats.md                 # Stats command for pairwise model analysis
 └── README.md
 ```
 
@@ -125,18 +127,47 @@ Each council run persists structured data to `$HOME/.claude/ok-council/logs/`:
 Example councils.jsonl entry:
 ```json
 {
-  "run_id": "council-20260714-1234abcd",
-  "query": "Should we use WebSockets or SSE for real-time updates?",
+  "schema_version": 1,
+  "run_id": "council-1720960245123456789",
   "timestamp": "2026-07-14T10:30:45Z",
+  "query": "Should we use WebSockets or SSE for real-time updates?",
+  "query_domain": "architecture",
+  "prompt_hash": null,
   "models": [
     {
       "name": "claude-opus-4.6",
-      "response": "WebSockets are better for bidirectional communication...",
-      "score_from_others": [8, 7],
-      "reviews": ["Clear and well-reasoned...", "Good points but..."]
+      "version": "claude-opus-4-6[1m]",
+      "provider": "anthropic",
+      "tokens_in": null,
+      "tokens_out": null,
+      "latency_ms": null,
+      "cost_estimate_usd": null,
+      "failed": false,
+      "failure_reason": null
     }
   ],
-  "verdict": "The council consensus is WebSockets for this use case..."
+  "positions": {
+    "claude-opus-4.6": "WebSockets are better for bidirectional communication...",
+    "fable-sonnet5": "SSE is simpler for unidirectional updates...",
+    "gemini-3.1-pro": "Consider hybrid approach...",
+    "gpt-5.3-codex": "WebSockets for real-time collaboration..."
+  },
+  "reasoning_summaries": {
+    "claude-opus-4.6": "full-duplex communication, persistent connections, binary protocol support",
+    "fable-sonnet5": "simpler implementation, HTTP-compatible, built-in reconnection"
+  },
+  "peer_scores": {
+    "claude-opus-4.6": {
+      "accuracy": [8, 7, 9, null],
+      "insight": [7, 8, 8, null]
+    }
+  },
+  "strongest_picks": {
+    "claude-opus-4.6": "fable-sonnet5",
+    "fable-sonnet5": "claude-opus-4.6"
+  },
+  "chairman_source_models": ["claude-opus-4.6", "gemini-3.1-pro"],
+  "human_verdict": null
 }
 ```
 

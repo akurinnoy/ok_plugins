@@ -79,9 +79,8 @@ log("All tools verified: gemini at " + toolChecks.gemini.path + ", agent at " + 
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function escapeForShell(str) {
-  return str.replace(/'/g, "'\\''");
-}
+// Note: shellEscape function was removed - heredocs with <<'DELIM' treat everything as literal,
+// so single-quote escaping corrupts the saved content
 
 function buildShellRunnerPrompt(cliCommand, queryText) {
   return [
@@ -315,7 +314,7 @@ log("All 4 reviews + distillation collected.")
 
 // ── Post-Phase 2: Score Extraction ──────────────────────────────────────────
 
-const modelNames = MODEL_REGISTRY.map(function(m) { return m.name; })
+// Removed unused modelNames variable
 
 const scorePrompt = [
   "Extract numerical scores and strongest-response picks from these four peer reviews of a 4-model LLM Council.",
@@ -464,7 +463,7 @@ const chairmanPrompt = [
   "[Key insights from the peer review round. What did reviewers catch that the original responses missed? Which response was rated strongest and why?]",
   "",
   "## Final Answer",
-  "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all three.]",
+  "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all four.]",
   "",
   "Be direct. Do not hedge. The whole point of the council is to give the user more clarity than any single model could provide alone."
 ].join("\n");
@@ -566,19 +565,13 @@ var logEntry = {
 
 var logJson = JSON.stringify(logEntry)
 
-// Escape single quotes in responses for shell safety
-function shellEscape(s) {
-  if (!s) return ""
-  return s.replace(/'/g, "'\\''")
-}
-
 var logWriterPrompt = [
   "Write council verdict data to disk. Run these Bash commands:",
   "",
   "1. Get a timestamp and generate a unique run ID:",
   "```bash",
   "TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "RUN_ID=\"council-$(date +%s)\"",
+  "RUN_ID=\"council-$(date +%s%N)\"",
   "```",
   "",
   "2. Create directories:",
@@ -588,27 +581,27 @@ var logWriterPrompt = [
   "",
   "3. Write each model's raw response to its own file:",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/claude-opus-4.6.md\" <<'RESPONSE_EOF'",
-  shellEscape(claudeResponse || ""),
-  "RESPONSE_EOF",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/claude-opus-4.6.md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
+  (claudeResponse || ""),
+  "__COUNCIL_RESPONSE_7f3a9e2__",
   "```",
   "",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/fable-sonnet5.md\" <<'RESPONSE_EOF'",
-  shellEscape(fableResponse || ""),
-  "RESPONSE_EOF",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/fable-sonnet5.md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
+  (fableResponse || ""),
+  "__COUNCIL_RESPONSE_7f3a9e2__",
   "```",
   "",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/gemini-3.1-pro.md\" <<'RESPONSE_EOF'",
-  shellEscape(geminiResponse || ""),
-  "RESPONSE_EOF",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/gemini-3.1-pro.md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
+  (geminiResponse || ""),
+  "__COUNCIL_RESPONSE_7f3a9e2__",
   "```",
   "",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/gpt-5.3-codex.md\" <<'RESPONSE_EOF'",
-  shellEscape(cursorResponse || ""),
-  "RESPONSE_EOF",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/gpt-5.3-codex.md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
+  (cursorResponse || ""),
+  "__COUNCIL_RESPONSE_7f3a9e2__",
   "```",
   "",
   "4. Update the log JSON with the real timestamp and run_id, then append to the JSONL file.",
@@ -627,14 +620,14 @@ var logWriterPrompt = [
   "",
   "5. Also write the raw review texts for future reference:",
   "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/reviews.json\" <<'REVIEW_EOF'",
+  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/reviews.json\" <<'__COUNCIL_REVIEW_7f3a9e2__'",
   JSON.stringify({
     "claude-opus-4.6": claudeReview || null,
     "fable-sonnet5": fableReview || null,
     "gemini-3.1-pro": geminiReview || null,
     "gpt-5.3-codex": cursorReview || null
   }),
-  "REVIEW_EOF",
+  "__COUNCIL_REVIEW_7f3a9e2__",
   "```",
   "",
   "Return the RUN_ID and TIMESTAMP when done."

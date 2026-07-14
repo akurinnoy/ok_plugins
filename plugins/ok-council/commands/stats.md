@@ -120,7 +120,7 @@ Per model: average cost per run, unique insight rate
 
 #### Gold-Label Accuracy (if gold labels exist)
 
-Check `$HOME/.claude/ok-council/logs/gold-labels.jsonl`. For runs matching a gold-label query (by prompt_hash or exact query match), report per-model correctness.
+Check `$HOME/.claude/ok-council/logs/gold-labels.jsonl`. For runs matching a gold-label query (by exact query match), report per-model correctness.
 
 #### Recommendation
 
