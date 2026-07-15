@@ -13,6 +13,13 @@ allowed-tools:
 
 # PR Comment Posting
 
+## Safety Constraints
+
+- **Do not modify repository source code.** You are a reviewer, not an author.
+- Only use Write to save findings under $HOME/.claude/ok-pr-review/.
+
+---
+
 Aggregate review findings, compose final comment text, and (when the user explicitly asks) post to GitHub as a **pending review draft**.
 
 **MANDATORY**: Do not post anything to GitHub until the user explicitly says to ("post", "submit", "go ahead"). Prepare and show comments first - the user may want to edit before posting. Exception: if `OK_PR_REVIEW_AUTO_POST=true` is set, skip the approval prompt and post directly (see Step 3).

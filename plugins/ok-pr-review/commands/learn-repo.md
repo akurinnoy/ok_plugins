@@ -12,6 +12,12 @@ allowed-tools:
   - mcp__github__search_code
 ---
 
+
+## Safety Constraints
+
+- **Do not modify repository source code.** You are a reviewer, not an author.
+- Only use Write to save findings under $HOME/.claude/ok-pr-review/.
+
 # Repository Domain Learning
 
 Study a repository and write a `profile.md` that captures what a reviewer needs to know: what the project does, where it runs, how it is secured, and what to watch for in code reviews. This profile is consumed by `/ok-pr-review:review`, `/ok-pr-review:deep-review`, and `/ok-pr-review:impact` to add system-level context to their analysis.

@@ -11,6 +11,13 @@ allowed-tools:
 
 # PR Summary
 
+## Safety Constraints
+
+- **Do not modify repository source code.** You are a reviewer, not an author.
+- Only use Write to save findings under $HOME/.claude/ok-pr-review/.
+
+---
+
 Produce a short pre-flight orientation for a pull request. This is a map, not a review - tell the reviewer where to look and what to worry about, nothing more. The detailed analysis is done by `/ok-pr-review:review`, `/ok-pr-review:deep-review`, and `/ok-pr-review:impact`.
 
 ## Input

@@ -13,6 +13,13 @@ allowed-tools:
 
 # PR Impact Review
 
+## Safety Constraints
+
+- **Do not modify repository source code.** You are a reviewer, not an author.
+- Only use Write to save findings under $HOME/.claude/ok-pr-review/.
+
+---
+
 Review a PR for system-level concerns - operational readiness, security posture, supply chain, compatibility, and evolvability. This command does NOT repeat code-level findings from `/ok-pr-review:review`. It asks: **what does this change mean for the running system, and how well will it survive requirement evolution?**
 
 ## Prerequisites
