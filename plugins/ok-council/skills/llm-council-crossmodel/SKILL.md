@@ -1,32 +1,49 @@
 ---
 name: llm-council-crossmodel
-description: "Run a query through a 5-model LLM Council (Claude Opus 4.6, Fable/Sonnet 5, Gemini 3.1 Pro, GPT-5.4, Grok 4.5). Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
+description: "Run a query through a multi-model LLM Council with configurable models. Default: Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.4, Grok 4.5. Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
 ---
 
 # LLM Council — Cross-Model
 
-A multi-model council that runs your question through five genuinely different LLMs, has them peer-review each other anonymously, and synthesizes a verdict. The diversity comes from different model architectures and training data, not from prompting the same model with different thinking lenses.
+A multi-model council that runs your question through genuinely different LLMs, has them peer-review each other anonymously, and synthesizes a verdict. The diversity comes from different model architectures and training data, not from prompting the same model with different thinking lenses.
 
 ## Prerequisites
 
-This skill requires two external CLI tools alongside Claude Code:
+The workflow checks which CLI tools are needed based on the configured models and verifies they're available.
 
 | Tool | Command | Install |
 |------|---------|---------|
 | Gemini CLI | `gemini` | `npm install -g @google/gemini-cli` or see [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) |
 | Cursor Agent CLI | `agent` | `curl https://cursor.com/install -fsS \| bash` — see [cursor.com/docs/cli/installation](https://cursor.com/docs/cli/installation) |
 
-Before the workflow runs, it verifies both tools are available and reports any that are missing with install instructions.
-
 ## Models
 
-| Label | Model | Invocation |
-|-------|-------|------------|
-| Claude | Opus 4.6 | Native `agent()` call |
-| Fable | Sonnet 5 (claude-sonnet-5-thinking-high) | `agent --yolo --trust --model claude-sonnet-5-thinking-high -p "..."` via Bash |
-| Gemini | gemini-3.1-pro-preview | `gemini -y --skip-trust -m gemini-3.1-pro-preview -p "..."` via Bash |
-| Cursor/GPT | gpt-5.4-high | `agent --yolo --trust --model gpt-5.4-high -p "..."` via Bash |
-| Grok | grok-4.5 (cursor-grok-4.5-high) | `agent --yolo --trust --model cursor-grok-4.5-high -p "..."` via Bash |
+Models are configurable via `$HOME/.claude/ok-council/models.json`. If the file doesn't exist, the workflow uses these defaults:
+
+| Name | Provider | CLI |
+|------|----------|-----|
+| claude-opus-4.6 | anthropic | `native` (uses Claude's built-in `agent()` call) |
+| fable-sonnet5 | anthropic | `agent --yolo --trust --model claude-sonnet-5-thinking-high -p -` |
+| gemini-3.1-pro | google | `gemini -y --skip-trust -m gemini-3.1-pro-preview -p -` |
+| gpt-5.4 | openai | `agent --yolo --trust --model gpt-5.4-high -p -` |
+| grok-4.5 | xai | `agent --yolo --trust --model cursor-grok-4.5-high -p -` |
+
+To customize, create `$HOME/.claude/ok-council/models.json`:
+
+```json
+{
+  "reviewers": 3,
+  "models": [
+    {"name": "claude-opus-4.6", "provider": "anthropic", "cli": "native"},
+    {"name": "gemini-3.1-pro", "provider": "google", "cli": "gemini -y --skip-trust -m gemini-3.1-pro-preview -p -"},
+    {"name": "gpt-5.4", "provider": "openai", "cli": "agent --yolo --trust --model gpt-5.4-high -p -"}
+  ]
+}
+```
+
+- `models`: array of model entries. Each needs `name`, `provider`, and `cli`. Set `cli` to `"native"` for the model running inside Claude Code.
+- `reviewers`: how many models perform peer review in simple mode (default: 3). `--full` overrides this to all models.
+- A plain JSON array (old format) is also accepted for backward compatibility.
 
 ## How to invoke
 
