@@ -19,16 +19,18 @@ Input: {{args}}
 
 Accepted forms:
 - No arguments: analyze all pairs across all runs
-- `opus fable`: analyze a specific pair (use short names: opus, fable, gemini, gpt, grok)
+- `opus fable`: analyze a specific pair (use short names or full names from logs)
 - `--domain code`: filter to runs in a specific query domain
 - `--review`: enter human spot-check mode for unreviewed runs
 
-Short name mapping:
+Model names are read from the JSONL log entries. For convenience, common short names are recognized:
 - `opus` → `claude-opus-4.6`
 - `fable` → `fable-sonnet5`
 - `gemini` → `gemini-3.1-pro`
 - `gpt` → `gpt-5.4`
 - `grok` → `grok-4.5`
+
+If the user provides a name not in this list, match it against model names found in the logs.
 
 ## Process
 
