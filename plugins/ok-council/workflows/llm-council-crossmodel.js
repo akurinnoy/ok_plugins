@@ -14,10 +14,8 @@ export const meta = {
 
 var DEFAULT_MODELS = [
   { name: "claude-opus-4.6", provider: "anthropic", cli: "native" },
-  { name: "fable-sonnet5", provider: "anthropic", cli: "agent --yolo --trust --model claude-sonnet-5-thinking-high -p -" },
   { name: "gemini-3.1-pro", provider: "google", cli: "gemini -y --skip-trust -m gemini-3.1-pro-preview -p -" },
-  { name: "gpt-5.4", provider: "openai", cli: "agent --yolo --trust --model gpt-5.4-high -p -" },
-  { name: "grok-4.5", provider: "xai", cli: "agent --yolo --trust --model cursor-grok-4.5-high -p -" }
+  { name: "gpt-5.4", provider: "openai", cli: "agent --yolo --trust --model gpt-5.4-high -p -" }
 ]
 
 // ── Preflight: load config and verify tools ─────────────────────────────────
@@ -57,9 +55,10 @@ var configResult = await agent([
   }
 })
 
-// Parse config — supports both old format (plain array) and new format ({models, reviewers})
+// Parse config — supports both old format (plain array) and new format ({models, reviewers, logging})
 var models = DEFAULT_MODELS
 var configuredReviewerCount = 3
+var loggingEnabled = false
 if (configResult.config) {
   if (Array.isArray(configResult.config)) {
     models = configResult.config
@@ -67,6 +66,9 @@ if (configResult.config) {
     models = configResult.config.models
     if (configResult.config.reviewers) {
       configuredReviewerCount = configResult.config.reviewers
+    }
+    if (configResult.config.logging === true) {
+      loggingEnabled = true
     }
   }
 }
@@ -101,7 +103,7 @@ if (missing.length > 0) {
 
 var modelNames = models.map(function(m) { return m.name })
 var configSource = configResult.config ? "models.json" : "defaults"
-log("Loaded " + modelCount + " models from " + configSource + ": " + modelNames.join(", "))
+log("Loaded " + modelCount + " models from " + configSource + ": " + modelNames.join(", ") + " | logging: " + (loggingEnabled ? "on" : "off"))
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -192,7 +194,7 @@ var anonBlock = sortedLetters.map(function(letter) {
   return "**Response " + letter + ":**\n" + (modelResponses[mName] || "(no response)")
 }).join("\n\n")
 
-// ── Phase 2: Anonymous Review + Distillation (parallel) ─────────────────────
+// ── Phase 2: Anonymous Review (parallel, + distiller if logging) ────────────
 
 var reviewPrompt = [
   "You are reviewing the outputs of a " + modelCount + "-model LLM Council. " + modelCount + " different AI models independently answered this question:",
@@ -218,35 +220,9 @@ var reviewPrompt = [
   "Be specific. Reference responses by letter. Keep your review under 250 words. Be direct."
 ].join("\n");
 
-var distillParts = [
-  "You are a neutral analyst. Read the following " + modelCount + " model responses to a question and produce a structured summary of each.",
-  "",
-  "## Question",
-  query,
-  "",
-  "## Responses",
-  ""
-]
-for (var di = 0; di < models.length; di++) {
-  distillParts.push("**" + models[di].name + ":**")
-  distillParts.push(modelResponses[models[di].name] || "(no response - model failed)")
-  distillParts.push("")
-}
-distillParts.push(
-  "For each model that responded:",
-  "- **position**: Summarize the model's conclusion and key recommendation in up to 150 words. Preserve the specific stance.",
-  "- **reasoning**: List the key arguments as short comma-separated phrases (e.g., \"persistence needs, ecosystem maturity, operational simplicity\").",
-  "- **failed**: Set to true if the response is an error message, connection failure, or empty. Set to false otherwise.",
-  "",
-  "For failed models, set position and reasoning to empty strings and failed to true.",
-  "",
-  "Also classify the query_domain as one of: architecture, code, ethics, factual, creative, strategy, debugging, other."
-)
-var distillationPrompt = distillParts.join("\n")
-
 phase("Review & Distill")
 var mappingStr = models.map(function(m) { return m.name + "=" + anonMap[m.name] }).join(", ")
-log("Running anonymous cross-review + distillation (mapping: " + mappingStr + ")")
+log("Running anonymous cross-review (mapping: " + mappingStr + ")")
 
 var reviewerCount = fullMode ? models.length : configuredReviewerCount
 if (reviewerCount > models.length) reviewerCount = models.length
@@ -260,41 +236,91 @@ log("Review mode: " + (fullMode ? "full" : "simple") + " (" + reviewerCount + "/
 
 var reviewThunks = selectedReviewers.map(function(m) { return makeReviewThunk(m, reviewPrompt) })
 
-// Build distillation schema dynamically from model names
-var distillModelProps = {}
-var distillModelRequired = []
-for (var dsi = 0; dsi < models.length; dsi++) {
-  distillModelProps[models[dsi].name] = {
-    type: "object",
-    properties: {
-      position: { type: "string" },
-      reasoning: { type: "string" },
-      failed: { type: "boolean" }
-    },
-    required: ["position", "reasoning", "failed"]
+// When logging is enabled, run distiller in parallel with reviews
+var distillation = null
+if (loggingEnabled) {
+  var distillParts = [
+    "You are a neutral analyst. Read the following " + modelCount + " model responses to a question and produce a structured summary of each.",
+    "",
+    "## Question",
+    query,
+    "",
+    "## Responses",
+    ""
+  ]
+  for (var di = 0; di < models.length; di++) {
+    distillParts.push("**" + models[di].name + ":**")
+    distillParts.push(modelResponses[models[di].name] || "(no response - model failed)")
+    distillParts.push("")
   }
-  distillModelRequired.push(models[dsi].name)
-}
+  distillParts.push(
+    "For each model that responded:",
+    "- **position**: Summarize the model's conclusion and key recommendation in up to 150 words. Preserve the specific stance.",
+    "- **reasoning**: List the key arguments as short comma-separated phrases (e.g., \"persistence needs, ecosystem maturity, operational simplicity\").",
+    "- **failed**: Set to true if the response is an error message, connection failure, or empty. Set to false otherwise.",
+    "",
+    "For failed models, set position and reasoning to empty strings and failed to true.",
+    "",
+    "Also classify the query_domain as one of: architecture, code, ethics, factual, creative, strategy, debugging, other.",
+    "",
+    "Also extract peer review scores from the following reviews. For each review, extract accuracy and insight scores (1-10) for each model, and which model was picked as strongest. Use the de-anonymization key to map letters back to model names.",
+    "",
+    "De-anonymization key:"
+  )
+  for (var dki = 0; dki < models.length; dki++) {
+    distillParts.push("Response " + anonMap[models[dki].name] + " = " + models[dki].name)
+  }
+  var distillationPrompt = distillParts.join("\n")
 
-reviewThunks.push(function() {
-  return agent(distillationPrompt, {
-    label: "distiller",
-    phase: "Review & Distill",
-    model: "sonnet",
-    schema: {
+  var distillModelProps = {}
+  var distillModelRequired = []
+  for (var dsi = 0; dsi < models.length; dsi++) {
+    distillModelProps[models[dsi].name] = {
       type: "object",
       properties: {
-        query_domain: { type: "string" },
-        models: {
-          type: "object",
-          properties: distillModelProps,
-          required: distillModelRequired
-        }
+        position: { type: "string" },
+        reasoning: { type: "string" },
+        failed: { type: "boolean" },
+        accuracy: { type: "array", items: { type: ["integer", "null"] } },
+        insight: { type: "array", items: { type: ["integer", "null"] } }
       },
-      required: ["query_domain", "models"]
+      required: ["position", "reasoning", "failed", "accuracy", "insight"]
     }
+    distillModelRequired.push(models[dsi].name)
+  }
+
+  var pickProps = {}
+  var pickRequired = []
+  for (var pki = 0; pki < models.length; pki++) {
+    pickProps[models[pki].name] = { type: ["string", "null"] }
+    pickRequired.push(models[pki].name)
+  }
+
+  reviewThunks.push(function() {
+    return agent(distillationPrompt, {
+      label: "analyst",
+      phase: "Review & Distill",
+      model: "sonnet",
+      schema: {
+        type: "object",
+        properties: {
+          query_domain: { type: "string" },
+          models: {
+            type: "object",
+            properties: distillModelProps,
+            required: distillModelRequired
+          },
+          strongest_picks: {
+            type: "object",
+            properties: pickProps,
+            required: pickRequired
+          }
+        },
+        required: ["query_domain", "models", "strongest_picks"]
+      }
+    })
   })
-})
+}
 
 var phase2 = await parallel(reviewThunks)
 
@@ -302,77 +328,13 @@ var reviewResults = {}
 for (var rri = 0; rri < selectedReviewers.length; rri++) {
   reviewResults[selectedReviewers[rri].name] = phase2[rri]
 }
-var distillation = phase2[phase2.length - 1]
 
-log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ") + distillation.")
-
-// ── Post-Phase 2: Score Extraction ──────────────────────────────────────────
-
-var scoreParts = [
-  "Extract numerical scores and strongest-response picks from the peer reviews of a " + modelCount + "-model LLM Council. Some models may not have reviewed (marked as 'review not performed').",
-  "",
-  "The reviews used anonymized response letters. Here is the de-anonymization key:"
-]
-for (var ski = 0; ski < models.length; ski++) {
-  scoreParts.push("Response " + anonMap[models[ski].name] + " = " + models[ski].name)
+if (loggingEnabled) {
+  distillation = phase2[phase2.length - 1]
+  log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ") + analyst distillation.")
+} else {
+  log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ").")
 }
-scoreParts.push("")
-for (var srvi = 0; srvi < models.length; srvi++) {
-  scoreParts.push("## Review by " + models[srvi].name + ":")
-  scoreParts.push(reviewResults[models[srvi].name] || "(review not performed)")
-  scoreParts.push("")
-}
-scoreParts.push(
-  "For each review that contains scores, extract the accuracy and insight scores (1-10) for each model.",
-  "Use the de-anonymization key to map letter responses back to model names.",
-  "Return scores as arrays — one score per reviewer, in order: [" + modelNames.map(function(n) { return n + "-review" }).join(", ") + "]. Use null for reviewers that did not perform a review or didn't provide scores.",
-  "",
-  "For strongest_picks: which model did each reviewer pick as the strongest response? Map letters back to model names. Use null if the reviewer did not review."
-)
-var scorePrompt = scoreParts.join("\n")
-
-log("Extracting structured scores from reviews...")
-
-// Build score schema dynamically
-var scoreModelProps = {}
-var scoreModelRequired = []
-var pickProps = {}
-var pickRequired = []
-for (var ssi = 0; ssi < models.length; ssi++) {
-  scoreModelProps[models[ssi].name] = {
-    type: ["object", "null"],
-    properties: {
-      accuracy: { type: "array", items: { type: ["integer", "null"] } },
-      insight: { type: "array", items: { type: ["integer", "null"] } }
-    },
-    required: ["accuracy", "insight"]
-  }
-  scoreModelRequired.push(models[ssi].name)
-  pickProps[models[ssi].name] = { type: ["string", "null"] }
-  pickRequired.push(models[ssi].name)
-}
-
-var scores = await agent(scorePrompt, {
-  label: "score-extractor",
-  phase: "Review & Distill",
-  model: "sonnet",
-  schema: {
-    type: "object",
-    properties: {
-      scores: {
-        type: "object",
-        properties: scoreModelProps,
-        required: scoreModelRequired
-      },
-      strongest_picks: {
-        type: "object",
-        properties: pickProps,
-        required: pickRequired
-      }
-    },
-    required: ["scores", "strongest_picks"]
-  }
-})
 
 // ── Phase 3: Chairman Synthesis ─────────────────────────────────────────────
 
@@ -417,7 +379,18 @@ chairmanParts.push(
   "[Key insights from the peer review round. What did reviewers catch that the original responses missed? Which response was rated strongest and why?]",
   "",
   "## Final Answer",
-  "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all of them.]",
+  "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all of them.]"
+)
+
+if (loggingEnabled) {
+  chairmanParts.push(
+    "",
+    "## Sources",
+    "[List which models' positions most directly influenced your final answer - whose specific recommendations, arguments, or framings you adopted.]"
+  )
+}
+
+chairmanParts.push(
   "",
   "Be direct. Do not hedge. The whole point of the council is to give the user more clarity than any single model could provide alone."
 )
@@ -428,151 +401,138 @@ log("Chairman synthesizing final verdict...")
 
 var verdict = await agent(chairmanPrompt, { label: "chairman", phase: "Chairman Synthesis" })
 
-// ── Phase 4: Logging ────────────────────────────────────────────────────────
+// ── Phase 4: Logging (only when enabled) ──────────────────────────────────
 
-phase("Logging")
-log("Persisting verdict data...")
+if (loggingEnabled) {
+  phase("Logging")
+  log("Persisting verdict data...")
 
-var sourceParts = [
-  "Compare the following chairman synthesis against each model's position. Identify which models' answers most directly influenced the synthesis — whose specific recommendations, arguments, or framings appear in the final verdict.",
-  "",
-  "## Chairman Synthesis",
-  verdict,
-  "",
-  "## Model Positions",
-  ""
-]
-for (var spi = 0; spi < models.length; spi++) {
-  var pos = distillation.models[models[spi].name]
-  sourceParts.push("**" + models[spi].name + ":** " + (pos && !pos.failed ? pos.position : "(failed)"))
-}
-sourceParts.push("")
-sourceParts.push("Return the list of model names whose positions materially influenced the synthesis.")
-var chairmanSourcePrompt = sourceParts.join("\n")
-
-var chairmanSources = await agent(chairmanSourcePrompt, {
-  label: "source-detector",
-  phase: "Logging",
-  model: "sonnet",
-  schema: {
-    type: "object",
-    properties: {
-      source_models: {
-        type: "array",
-        items: { type: "string" }
+  // Get timing via structured output
+  var timing = await agent(
+    "Run these two bash commands and return the output of each:\n" +
+    "1. date -u +%Y-%m-%dT%H:%M:%SZ\n" +
+    "2. date +%s%N\n" +
+    "Return the timestamp from command 1 and the nanosecond value from command 2.",
+    {
+      label: "get-timing",
+      phase: "Logging",
+      model: "haiku",
+      effort: "low",
+      schema: {
+        type: "object",
+        properties: {
+          timestamp: { type: "string" },
+          nanos: { type: "string" }
+        },
+        required: ["timestamp", "nanos"]
       }
-    },
-    required: ["source_models"]
-  }
-})
-
-// Build log entry from model list
-var positions = {}
-var reasoningSummaries = {}
-var modelMeta = []
-var peerScores = {}
-var strongestPicks = {}
-
-for (var li = 0; li < models.length; li++) {
-  var m = models[li]
-  var d = distillation.models[m.name]
-  positions[m.name] = d && !d.failed ? d.position : null
-  reasoningSummaries[m.name] = d && !d.failed ? d.reasoning : null
-  modelMeta.push({
-    name: m.name,
-    provider: m.provider,
-    cli: m.cli,
-    tokens_in: null,
-    tokens_out: null,
-    latency_ms: null,
-    cost_estimate_usd: null,
-    failed: d ? d.failed : true,
-    failure_reason: (d && d.failed) ? "Model failed to produce a valid response" : null
-  })
-  peerScores[m.name] = (scores.scores && scores.scores[m.name]) || null
-  strongestPicks[m.name] = (scores.strongest_picks && scores.strongest_picks[m.name]) || null
-}
-
-var logEntry = {
-  schema_version: 2,
-  run_id: "council-placeholder",
-  timestamp: null,
-  query: query,
-  query_domain: distillation.query_domain,
-  review_mode: fullMode ? "full" : "simple",
-  reviewers: selectedReviewers.map(function(m) { return m.name }),
-  models: modelMeta,
-  positions: positions,
-  reasoning_summaries: reasoningSummaries,
-  peer_scores: peerScores,
-  strongest_picks: strongestPicks,
-  chairman_source_models: chairmanSources.source_models,
-  human_verdict: null
-}
-
-var logJson = JSON.stringify(logEntry)
-
-// Build response file write commands dynamically
-var responseWriteCmds = []
-for (var rwi = 0; rwi < models.length; rwi++) {
-  responseWriteCmds.push(
-    "```bash",
-    "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/" + models[rwi].name + ".md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
-    (modelResponses[models[rwi].name] || ""),
-    "__COUNCIL_RESPONSE_7f3a9e2__",
-    "```",
-    ""
+    }
   )
+
+  // Extract source models from the chairman's ## Sources section
+  var sourceModels = []
+  if (verdict) {
+    for (var smi = 0; smi < models.length; smi++) {
+      var sourcesSection = verdict.indexOf("## Sources")
+      if (sourcesSection !== -1 && verdict.indexOf(models[smi].name, sourcesSection) !== -1) {
+        sourceModels.push(models[smi].name)
+      }
+    }
+  }
+
+  // Build log entry with real values
+  var positions = {}
+  var reasoningSummaries = {}
+  var modelMeta = []
+  var peerScores = {}
+  var strongestPicks = {}
+
+  for (var li = 0; li < models.length; li++) {
+    var m = models[li]
+    var d = distillation.models[m.name]
+    positions[m.name] = d && !d.failed ? d.position : null
+    reasoningSummaries[m.name] = d && !d.failed ? d.reasoning : null
+    modelMeta.push({
+      name: m.name,
+      provider: m.provider,
+      cli: m.cli,
+      tokens_in: null,
+      tokens_out: null,
+      latency_ms: null,
+      cost_estimate_usd: null,
+      failed: d ? d.failed : true,
+      failure_reason: (d && d.failed) ? "Model failed to produce a valid response" : null
+    })
+    peerScores[m.name] = d ? { accuracy: d.accuracy, insight: d.insight } : null
+    strongestPicks[m.name] = (distillation.strongest_picks && distillation.strongest_picks[m.name]) || null
+  }
+
+  var logEntry = {
+    schema_version: 2,
+    run_id: "council-" + timing.nanos,
+    timestamp: timing.timestamp,
+    query: query,
+    query_domain: distillation.query_domain,
+    review_mode: fullMode ? "full" : "simple",
+    reviewers: selectedReviewers.map(function(m) { return m.name }),
+    models: modelMeta,
+    positions: positions,
+    reasoning_summaries: reasoningSummaries,
+    peer_scores: peerScores,
+    strongest_picks: strongestPicks,
+    chairman_source_models: sourceModels,
+    human_verdict: null
+  }
+
+  var finalJson = JSON.stringify(logEntry)
+  var escapedJson = finalJson.replace(/'/g, "'\\''")
+
+  // Build response file write commands
+  var responseWriteCmds = []
+  for (var rwi = 0; rwi < models.length; rwi++) {
+    responseWriteCmds.push(
+      "```bash",
+      "cat > \"$HOME/.claude/ok-council/logs/responses/" + logEntry.run_id + "/" + models[rwi].name + ".md\" <<'__COUNCIL_RESPONSE_7f3a9e2__'",
+      (modelResponses[models[rwi].name] || ""),
+      "__COUNCIL_RESPONSE_7f3a9e2__",
+      "```",
+      ""
+    )
+  }
+
+  var reviewsObj = {}
+  for (var rji = 0; rji < models.length; rji++) {
+    reviewsObj[models[rji].name] = reviewResults[models[rji].name] || null
+  }
+
+  var logWriterPrompt = [
+    "Write council verdict data to disk. Run these Bash commands:",
+    "",
+    "1. Create directories:",
+    "```bash",
+    "mkdir -p \"$HOME/.claude/ok-council/logs/responses/" + logEntry.run_id + "\"",
+    "```",
+    "",
+    "2. Write each model's raw response to its own file:"
+  ].concat(responseWriteCmds).concat([
+    "3. Append the log entry to the JSONL file:",
+    "```bash",
+    "printf '%s\\n' '" + escapedJson + "' >> \"$HOME/.claude/ok-council/logs/councils.jsonl\"",
+    "```",
+    "",
+    "4. Write the raw review texts:",
+    "```bash",
+    "cat > \"$HOME/.claude/ok-council/logs/responses/" + logEntry.run_id + "/reviews.json\" <<'__COUNCIL_REVIEW_7f3a9e2__'",
+    JSON.stringify(reviewsObj),
+    "__COUNCIL_REVIEW_7f3a9e2__",
+    "```",
+    "",
+    "Return the run_id '" + logEntry.run_id + "' when done."
+  ]).join("\n")
+
+  var logResult = await agent(logWriterPrompt, { label: "log-writer", phase: "Logging" })
+  log("Verdict data persisted. " + logResult)
 }
-
-// Build reviews JSON dynamically
-var reviewsObj = {}
-for (var rji = 0; rji < models.length; rji++) {
-  reviewsObj[models[rji].name] = reviewResults[models[rji].name] || null
-}
-
-var logWriterPrompt = [
-  "Write council verdict data to disk. Run these Bash commands:",
-  "",
-  "1. Get a timestamp and generate a unique run ID:",
-  "```bash",
-  "TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "RUN_ID=\"council-$(date +%s%N)\"",
-  "```",
-  "",
-  "2. Create directories:",
-  "```bash",
-  "mkdir -p \"$HOME/.claude/ok-council/logs/responses/$RUN_ID\"",
-  "```",
-  "",
-  "3. Write each model's raw response to its own file:"
-].concat(responseWriteCmds).concat([
-  "4. Update the log JSON with the real timestamp and run_id, then append to the JSONL file.",
-  "Take this JSON template and replace the run_id and timestamp fields with the values from step 1:",
-  "",
-  "```",
-  logJson,
-  "```",
-  "",
-  "Use jq or sed to replace:",
-  '- "run_id":"council-placeholder" with "run_id":"$RUN_ID"',
-  '- "timestamp":null with "timestamp":"$TIMESTAMP"',
-  "",
-  "Then append the updated JSON as a single line to:",
-  "`$HOME/.claude/ok-council/logs/councils.jsonl`",
-  "",
-  "5. Also write the raw review texts for future reference:",
-  "```bash",
-  "cat > \"$HOME/.claude/ok-council/logs/responses/$RUN_ID/reviews.json\" <<'__COUNCIL_REVIEW_7f3a9e2__'",
-  JSON.stringify(reviewsObj),
-  "__COUNCIL_REVIEW_7f3a9e2__",
-  "```",
-  "",
-  "Return the RUN_ID and TIMESTAMP when done."
-]).join("\n")
-
-var logResult = await agent(logWriterPrompt, { label: "log-writer", phase: "Logging" })
-log("Verdict data persisted. " + logResult)
 
 // ── Output ──────────────────────────────────────────────────────────────────
 
@@ -591,5 +551,6 @@ return [
   "",
   "*Council: " + modelNames.join(", ") + " (" + configSource + ")*",
   "*Anonymization: " + anonMappingStr + "*",
-  "*Review mode: " + (fullMode ? "full (" + modelCount + "/" + modelCount + " reviewers)" : "simple (" + selectedReviewers.length + "/" + modelCount + " reviewers) | Use --full for all " + modelCount) + "*"
+  "*Review mode: " + (fullMode ? "full (" + modelCount + "/" + modelCount + " reviewers)" : "simple (" + selectedReviewers.length + "/" + modelCount + " reviewers) | Use --full for all " + modelCount) + "*",
+  loggingEnabled ? "*Logging: on*" : "*Logging: off (set \"logging\": true in models.json to enable)*"
 ].join("\n");

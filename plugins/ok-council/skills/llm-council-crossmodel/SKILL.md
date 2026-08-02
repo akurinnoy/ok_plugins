@@ -1,6 +1,6 @@
 ---
 name: llm-council-crossmodel
-description: "Run a query through a multi-model LLM Council with configurable models. Default: Claude Opus, Fable (Sonnet 5), Gemini 3.1 Pro, GPT-5.4, Grok 4.5. Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
+description: "Run a query through a multi-model LLM Council with configurable models. Default: Claude Opus, Gemini 3.1 Pro, GPT-5.4. Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
 ---
 
 # LLM Council — Cross-Model
@@ -23,10 +23,8 @@ Models are configurable via `$HOME/.claude/ok-council/models.json`. If the file 
 | Name | Provider | CLI |
 |------|----------|-----|
 | claude-opus-4.6 | anthropic | `native` (uses Claude's built-in `agent()` call) |
-| fable-sonnet5 | anthropic | `agent --yolo --trust --model claude-sonnet-5-thinking-high -p -` |
 | gemini-3.1-pro | google | `gemini -y --skip-trust -m gemini-3.1-pro-preview -p -` |
 | gpt-5.4 | openai | `agent --yolo --trust --model gpt-5.4-high -p -` |
-| grok-4.5 | xai | `agent --yolo --trust --model cursor-grok-4.5-high -p -` |
 
 To customize, create `$HOME/.claude/ok-council/models.json`:
 
@@ -43,6 +41,7 @@ To customize, create `$HOME/.claude/ok-council/models.json`:
 
 - `models`: array of model entries. Each needs `name`, `provider`, and `cli`. Set `cli` to `"native"` for the model running inside Claude Code.
 - `reviewers`: how many models perform peer review in simple mode (default: 3). `--full` overrides this to all models.
+- `logging`: when `true`, enables analytics pipeline (distillation, score extraction, source detection, JSONL logging). Default: `false`. Enable when comparing model performance via `/ok-council:stats`.
 - A plain JSON array (old format) is also accepted for backward compatibility.
 
 ## How to invoke
@@ -53,7 +52,7 @@ When this skill is triggered, determine this plugin's root directory from the pa
 Workflow({ scriptPath: "<plugin-root>/workflows/llm-council-crossmodel.js", args: "<user's query>" })
 ```
 
-By default, 3 of 5 models perform peer review (simple mode). Prepend `--full` to the args for all 5 reviewers when:
+With the default 3-model setup, all models always perform peer review. The `--full` flag is relevant when custom configs add more models. Prepend `--full` to the args when:
 - The user passes the `--full` flag explicitly (e.g., `/llm-council-crossmodel --full Should I use Redis?`)
 - The user says "full council", "thorough council", or explicitly asks for all models to review
 
