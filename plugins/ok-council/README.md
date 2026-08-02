@@ -1,6 +1,6 @@
 # ok-council
 
-A Claude Code plugin that runs your question through three different LLMs — **Claude Opus 4.6**, **Gemini 3 Pro**, and **GPT-5.3 Codex** — has them peer-review each other anonymously, then synthesizes a verdict.
+A Claude Code plugin that runs your question through three different LLMs — **Claude Opus 4.6**, **Gemini 3.1 Pro**, and **GPT-5.4** — has them peer-review each other anonymously, then synthesizes a verdict.
 
 ## How It Works
 
@@ -13,7 +13,7 @@ A Claude Code plugin that runs your question through three different LLMs — **
     ▼           ▼           ▼
 ┌────────┐ ┌────────┐ ┌────────┐
 │ Claude │ │ Gemini │ │  GPT   │   Phase 1: Independent answers
-│Opus 4.6│ │ 3 Pro  │ │5.3 Cdx │
+│Opus 4.6│ │3.1 Pro │ │  5.4   │
 └───┬────┘ └───┬────┘ └───┬────┘
     │          │          │
     ▼          ▼          ▼
@@ -148,23 +148,22 @@ Example councils.jsonl entry:
   ],
   "positions": {
     "claude-opus-4.6": "WebSockets are better for bidirectional communication...",
-    "fable-sonnet5": "SSE is simpler for unidirectional updates...",
     "gemini-3.1-pro": "Consider hybrid approach...",
-    "gpt-5.3-codex": "WebSockets for real-time collaboration..."
+    "gpt-5.4": "WebSockets for real-time collaboration..."
   },
   "reasoning_summaries": {
     "claude-opus-4.6": "full-duplex communication, persistent connections, binary protocol support",
-    "fable-sonnet5": "simpler implementation, HTTP-compatible, built-in reconnection"
+    "gemini-3.1-pro": "simpler implementation, HTTP-compatible, built-in reconnection"
   },
   "peer_scores": {
     "claude-opus-4.6": {
-      "accuracy": [8, 7, 9, null],
-      "insight": [7, 8, 8, null]
+      "accuracy": [8, 7, 9],
+      "insight": [7, 8, 8]
     }
   },
   "strongest_picks": {
-    "claude-opus-4.6": "fable-sonnet5",
-    "fable-sonnet5": "claude-opus-4.6"
+    "claude-opus-4.6": "gpt-5.4",
+    "gemini-3.1-pro": "claude-opus-4.6"
   },
   "chairman_source_models": ["claude-opus-4.6", "gemini-3.1-pro"],
   "human_verdict": null
