@@ -1,6 +1,6 @@
 ---
 name: llm-council-crossmodel
-description: "Run a query through a multi-model LLM Council with configurable models. Default: Claude Opus, Gemini 3.1 Pro, GPT-5.4. Each model answers independently, peer-reviews anonymously, then Claude synthesizes a verdict. Each run is logged for cross-run model comparison. Trigger: /llm-council-crossmodel"
+description: "Run a query through a multi-model LLM Council with configurable models. Default: Claude Opus, Gemini 3.1 Pro, GPT-5.4. Each model answers independently, then Claude synthesizes a verdict. With 4+ models, anonymous peer review runs before synthesis. Trigger: /llm-council-crossmodel"
 ---
 
 # LLM Council — Cross-Model
@@ -46,19 +46,57 @@ To customize, create `$HOME/.claude/ok-council/models.json`:
 
 ## How to invoke
 
-When this skill is triggered, determine this plugin's root directory from the path of this SKILL.md file (strip `skills/llm-council-crossmodel/SKILL.md`), then call the **Workflow** tool with `scriptPath` pointing to the bundled workflow script. Pass the user's query as `args`:
+When this skill is triggered, determine this plugin's root directory from the path of this SKILL.md file (strip `skills/llm-council-crossmodel/SKILL.md`).
+
+### Step 1: Preflight (run in the current session, NOT in the workflow)
+
+Before calling the Workflow tool, run these checks via the **Bash** tool:
+
+1. **Load model config:**
+   ```bash
+   cat "$HOME/.claude/ok-council/models.json" 2>/dev/null || echo '__NO_CONFIG__'
+   ```
+   - If `__NO_CONFIG__`: use the default models (see table above)
+   - Otherwise: parse the JSON. It may be a plain array (old format) or an object with `models`, `reviewers`, and `logging` keys (new format)
+
+2. **Check CLI tools:**
+   ```bash
+   which gemini 2>/dev/null || echo 'NOT_FOUND'
+   which agent 2>/dev/null || echo 'NOT_FOUND'
+   ```
+   - Scan the model list: if any model's `cli` contains `"gemini"`, the `gemini` CLI is required. If any model's `cli` is not `"native"` and not gemini-based, the `agent` CLI is required.
+   - If a required tool is `NOT_FOUND`, **STOP** and tell the user what to install. Do NOT invoke the workflow.
+
+3. **Parse flags:**
+   - Check if the user passed `--full` or said "full council" / "thorough council"
+   - Strip `--full` from the query text
+
+### Step 2: Invoke the workflow
+
+Build a structured `args` object and pass it to the Workflow tool:
 
 ```
-Workflow({ scriptPath: "<plugin-root>/workflows/llm-council-crossmodel.js", args: "<user's query>" })
+Workflow({
+  scriptPath: "<plugin-root>/workflows/llm-council-crossmodel.js",
+  args: {
+    "query": "<user's query, with --full stripped>",
+    "fullMode": false,
+    "config": {
+      "models": [<parsed model array or defaults>],
+      "reviewerCount": 3,
+      "loggingEnabled": false
+    },
+    "tools": {
+      "gemini": "<path from which or null>",
+      "agent": "<path from which or null>"
+    }
+  }
+})
 ```
 
-With the default 3-model setup, all models always perform peer review. The `--full` flag is relevant when custom configs add more models. Prepend `--full` to the args when:
-- The user passes the `--full` flag explicitly (e.g., `/llm-council-crossmodel --full Should I use Redis?`)
-- The user says "full council", "thorough council", or explicitly asks for all models to review
+Set `fullMode: true` when the user passes `--full` or says "full council" / "thorough council".
 
-```
-Workflow({ scriptPath: "<plugin-root>/workflows/llm-council-crossmodel.js", args: "--full <user's query>" })
-```
+Set `reviewerCount` and `loggingEnabled` from the config file values if present, otherwise use defaults (3 and false).
 
 ## When to use
 
