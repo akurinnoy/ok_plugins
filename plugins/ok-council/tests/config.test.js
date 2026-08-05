@@ -64,6 +64,10 @@ function buildAnonymization(models, queryLength) {
   return { anonMap: anonMap, reverseMap: reverseMap };
 }
 
+function shouldSkipReviews(modelCount) {
+  return modelCount <= 3;
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('parseConfig', function() {
@@ -357,5 +361,23 @@ describe('buildAnonymization', function() {
     assert.equal(Object.keys(result.anonMap).length, 10);
     var usedLetters = Object.values(result.anonMap);
     assert.equal(new Set(usedLetters).size, 10);
+  });
+});
+
+describe('shouldSkipReviews', function() {
+  it('skips reviews for 2 models', function() {
+    assert.equal(shouldSkipReviews(2), true);
+  });
+
+  it('skips reviews for 3 models', function() {
+    assert.equal(shouldSkipReviews(3), true);
+  });
+
+  it('runs reviews for 4 models', function() {
+    assert.equal(shouldSkipReviews(4), false);
+  });
+
+  it('runs reviews for 5 models', function() {
+    assert.equal(shouldSkipReviews(5), false);
   });
 });

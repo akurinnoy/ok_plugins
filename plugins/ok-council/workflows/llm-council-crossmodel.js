@@ -2,7 +2,6 @@ export const meta = {
   name: "llm-council-crossmodel",
   description: "Multi-model LLM Council with configurable models",
   phases: [
-    { title: "Preflight", detail: "Verify CLI tools and load model config" },
     { title: "First Opinions", detail: "All models answer independently in parallel" },
     { title: "Review & Distill", detail: "Peer review + position distillation in parallel" },
     { title: "Chairman Synthesis", detail: "Claude synthesizes the final verdict" },
@@ -18,91 +17,66 @@ var DEFAULT_MODELS = [
   { name: "gpt-5.4", provider: "openai", cli: "agent --yolo --trust --model gpt-5.4-high -p -" }
 ]
 
-// ── Preflight: load config and verify tools ─────────────────────────────────
+// ── Config: parse from args (preflight done in skill file) ─────────────────
 
-phase("Preflight")
-log("Loading model config and checking CLI tools...")
-
-var configResult = await agent([
-  "Read the council model config file and check CLI tools.",
-  "",
-  "Step 1: Try to read the config file:",
-  "```bash",
-  "cat \"$HOME/.claude/ok-council/models.json\" 2>/dev/null || echo '__NO_CONFIG__'",
-  "```",
-  "",
-  "Step 2: Check CLI tools:",
-  "```bash",
-  "which gemini 2>/dev/null || echo 'NOT_FOUND'",
-  "which agent 2>/dev/null || echo 'NOT_FOUND'",
-  "```",
-  "",
-  "Return a JSON object with:",
-  "- config: the parsed JSON from models.json, or null if the file doesn't exist (output was __NO_CONFIG__). The file may be a JSON array of models (old format) or a JSON object with a 'models' array and optional 'reviewers' number (new format). Return it as-is, preserving its structure.",
-  "- gemini_path: the path from `which gemini`, or null if NOT_FOUND",
-  "- agent_path: the path from `which agent`, or null if NOT_FOUND"
-].join("\n"), {
-  label: "config-loader",
-  phase: "Preflight",
-  schema: {
-    type: "object",
-    properties: {
-      config: {},
-      gemini_path: { type: ["string", "null"] },
-      agent_path: { type: ["string", "null"] }
-    },
-    required: ["config", "gemini_path", "agent_path"]
-  }
-})
-
-// Parse config — supports both old format (plain array) and new format ({models, reviewers, logging})
 var models = DEFAULT_MODELS
 var configuredReviewerCount = 3
 var loggingEnabled = false
-if (configResult.config) {
-  if (Array.isArray(configResult.config)) {
-    models = configResult.config
-  } else if (configResult.config.models) {
-    models = configResult.config.models
-    if (configResult.config.reviewers) {
-      configuredReviewerCount = configResult.config.reviewers
+var query = ""
+var fullMode = false
+
+if (args && typeof args === "object" && args.query) {
+  query = args.query
+  fullMode = !!args.fullMode
+  if (args.config) {
+    if (Array.isArray(args.config.models) && args.config.models.length > 0) {
+      models = args.config.models
     }
-    if (configResult.config.logging === true) {
+    if (args.config.reviewerCount) {
+      configuredReviewerCount = args.config.reviewerCount
+    }
+    if (args.config.loggingEnabled) {
       loggingEnabled = true
     }
   }
+  // Validate CLI tools
+  if (args.tools) {
+    var needsGemini = models.some(function(m) { return m.cli.indexOf("gemini") !== -1 })
+    var needsAgent = models.some(function(m) { return m.cli !== "native" && m.cli.indexOf("gemini") === -1 })
+    var missing = []
+    if (needsGemini && !args.tools.gemini) {
+      missing.push("- **gemini** — install via `npm install -g @google/gemini-cli` or see https://github.com/google-gemini/gemini-cli")
+    }
+    if (needsAgent && !args.tools.agent) {
+      missing.push("- **agent** — installed with Cursor; make sure `agent` is on your $PATH")
+    }
+    if (missing.length > 0) {
+      return [
+        "# LLM Council — Preflight Failed",
+        "",
+        "The following required CLI tools are not installed or not on your $PATH:",
+        "",
+        ...missing,
+        "",
+        "Install the missing tools and try again."
+      ].join("\n")
+    }
+  }
+} else {
+  // Legacy: args is a plain string
+  var rawArgs = typeof args === "string" ? args : ""
+  fullMode = rawArgs.indexOf("--full") !== -1
+  query = rawArgs.replace(/--full\s*/g, "").trim()
 }
+
 var modelCount = models.length
 
 if (modelCount < 2) {
   return "# LLM Council — Config Error\n\nAt least 2 models are required. Found " + modelCount + " in config."
 }
 
-var needsGemini = models.some(function(m) { return m.cli.indexOf("gemini") !== -1 })
-var needsAgent = models.some(function(m) { return m.cli !== "native" && m.cli.indexOf("gemini") === -1 })
-
-var missing = []
-if (needsGemini && !configResult.gemini_path) {
-  missing.push("- **gemini** — install via `npm install -g @google/gemini-cli` or see https://github.com/google-gemini/gemini-cli")
-}
-if (needsAgent && !configResult.agent_path) {
-  missing.push("- **agent** — installed with Cursor; make sure `agent` is on your $PATH")
-}
-
-if (missing.length > 0) {
-  return [
-    "# LLM Council — Preflight Failed",
-    "",
-    "The following required CLI tools are not installed or not on your $PATH:",
-    "",
-    ...missing,
-    "",
-    "Install the missing tools and try again."
-  ].join("\n")
-}
-
 var modelNames = models.map(function(m) { return m.name })
-var configSource = configResult.config ? "models.json" : "defaults"
+var configSource = (args && typeof args === "object" && args.config) ? "models.json" : "defaults"
 log("Loaded " + modelCount + " models from " + configSource + ": " + modelNames.join(", ") + " | logging: " + (loggingEnabled ? "on" : "off"))
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -141,11 +115,6 @@ function makeReviewThunk(model, prompt) {
   }
   return function() { return agent(buildShellRunnerPrompt(model.cli, prompt), { label: model.name + "-review", phase: "Review & Distill" }) }
 }
-
-// ── Args parsing ────────────────────────────────────────────────────────────
-
-var fullMode = typeof args === "string" && args.indexOf("--full") !== -1
-var query = typeof args === "string" ? args.replace(/--full\s*/g, "").trim() : args
 
 // ── Phase 1: First Opinions (parallel) ──────────────────────────────────────
 
@@ -194,53 +163,88 @@ var anonBlock = sortedLetters.map(function(letter) {
   return "**Response " + letter + ":**\n" + (modelResponses[mName] || "(no response)")
 }).join("\n\n")
 
-// ── Phase 2: Anonymous Review (parallel, + distiller if logging) ────────────
+// ── Phase 2: Anonymous Review (skip for ≤3 models) ────────────────────────
 
-var reviewPrompt = [
-  "You are reviewing the outputs of a " + modelCount + "-model LLM Council. " + modelCount + " different AI models independently answered this question:",
-  "",
-  "---",
-  query,
-  "---",
-  "",
-  "Here are their anonymized responses:",
-  "",
-  anonBlock,
-  "",
-  "Score each response on two dimensions (1-10 each):",
-  "- **Accuracy**: How factually correct and well-reasoned is the response?",
-  "- **Insight**: How much unique, non-obvious value does it add?",
-  "",
-  "Then answer:",
-  "1. Which response is the strongest? Why? (pick one letter)",
-  "2. Which response has the biggest blind spot? What is it missing?",
-  "3. What did ALL responses miss that should be considered?",
-  "",
-  "Format your scores as a table, then answer the three questions.",
-  "Be specific. Reference responses by letter. Keep your review under 250 words. Be direct."
-].join("\n");
-
-phase("Review & Distill")
-var mappingStr = models.map(function(m) { return m.name + "=" + anonMap[m.name] }).join(", ")
-log("Running anonymous cross-review (mapping: " + mappingStr + ")")
-
-var reviewerCount = fullMode ? models.length : configuredReviewerCount
-if (reviewerCount > models.length) reviewerCount = models.length
-var reviewerOffset = query.length % models.length
+var reviewsSkipped = modelCount <= 3
+var reviewResults = {}
+var distillation = null
 var selectedReviewers = []
-for (var ri = 0; ri < reviewerCount; ri++) {
-  selectedReviewers.push(models[(reviewerOffset + ri) % models.length])
+
+if (reviewsSkipped) {
+  phase("Review & Distill")
+  log("Skipping peer review (≤" + "3 models — chairman synthesizes directly)")
+
+  // Still run distiller if logging is enabled
+  if (loggingEnabled) {
+    log("Running analyst distillation for logging...")
+    distillation = await buildAndRunDistiller(models, modelResponses, query, anonMap)
+    log("Analyst distillation complete.")
+  }
+} else {
+  var reviewPrompt = [
+    "You are reviewing the outputs of a " + modelCount + "-model LLM Council. " + modelCount + " different AI models independently answered this question:",
+    "",
+    "---",
+    query,
+    "---",
+    "",
+    "Here are their anonymized responses:",
+    "",
+    anonBlock,
+    "",
+    "Score each response on two dimensions (1-10 each):",
+    "- **Accuracy**: How factually correct and well-reasoned is the response?",
+    "- **Insight**: How much unique, non-obvious value does it add?",
+    "",
+    "Then answer:",
+    "1. Which response is the strongest? Why? (pick one letter)",
+    "2. Which response has the biggest blind spot? What is it missing?",
+    "3. What did ALL responses miss that should be considered?",
+    "",
+    "Format your scores as a table, then answer the three questions.",
+    "Be specific. Reference responses by letter. Keep your review under 250 words. Be direct."
+  ].join("\n");
+
+  phase("Review & Distill")
+  var mappingStr = models.map(function(m) { return m.name + "=" + anonMap[m.name] }).join(", ")
+  log("Running anonymous cross-review (mapping: " + mappingStr + ")")
+
+  var reviewerCount = fullMode ? models.length : configuredReviewerCount
+  if (reviewerCount > models.length) reviewerCount = models.length
+  var reviewerOffset = query.length % models.length
+  for (var ri = 0; ri < reviewerCount; ri++) {
+    selectedReviewers.push(models[(reviewerOffset + ri) % models.length])
+  }
+
+  log("Review mode: " + (fullMode ? "full" : "simple") + " (" + reviewerCount + "/" + modelCount + " reviewers): " + selectedReviewers.map(function(m) { return m.name }).join(", "))
+
+  var reviewThunks = selectedReviewers.map(function(m) { return makeReviewThunk(m, reviewPrompt) })
+
+  if (loggingEnabled) {
+    reviewThunks.push(function() {
+      return buildAndRunDistillerAgent(models, modelResponses, query, anonMap)
+    })
+  }
+
+  var phase2 = await parallel(reviewThunks)
+
+  for (var rri = 0; rri < selectedReviewers.length; rri++) {
+    reviewResults[selectedReviewers[rri].name] = phase2[rri]
+  }
+
+  if (loggingEnabled) {
+    distillation = phase2[phase2.length - 1]
+    log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ") + analyst distillation.")
+  } else {
+    log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ").")
+  }
 }
 
-log("Review mode: " + (fullMode ? "full" : "simple") + " (" + reviewerCount + "/" + modelCount + " reviewers): " + selectedReviewers.map(function(m) { return m.name }).join(", "))
+// ── Distiller helper ───────────────────────────────────────────────────────
 
-var reviewThunks = selectedReviewers.map(function(m) { return makeReviewThunk(m, reviewPrompt) })
-
-// When logging is enabled, run distiller in parallel with reviews
-var distillation = null
-if (loggingEnabled) {
+function buildDistillerPromptAndSchema(models, modelResponses, query, anonMap) {
   var distillParts = [
-    "You are a neutral analyst. Read the following " + modelCount + " model responses to a question and produce a structured summary of each.",
+    "You are a neutral analyst. Read the following " + models.length + " model responses to a question and produce a structured summary of each.",
     "",
     "## Question",
     query,
@@ -270,7 +274,6 @@ if (loggingEnabled) {
   for (var dki = 0; dki < models.length; dki++) {
     distillParts.push("Response " + anonMap[models[dki].name] + " = " + models[dki].name)
   }
-  var distillationPrompt = distillParts.join("\n")
 
   var distillModelProps = {}
   var distillModelRequired = []
@@ -296,51 +299,60 @@ if (loggingEnabled) {
     pickRequired.push(models[pki].name)
   }
 
-  reviewThunks.push(function() {
-    return agent(distillationPrompt, {
-      label: "analyst",
-      phase: "Review & Distill",
-      model: "sonnet",
-      schema: {
-        type: "object",
-        properties: {
-          query_domain: { type: "string" },
-          models: {
-            type: "object",
-            properties: distillModelProps,
-            required: distillModelRequired
-          },
-          strongest_picks: {
-            type: "object",
-            properties: pickProps,
-            required: pickRequired
-          }
+  return {
+    prompt: distillParts.join("\n"),
+    schema: {
+      type: "object",
+      properties: {
+        query_domain: { type: "string" },
+        models: {
+          type: "object",
+          properties: distillModelProps,
+          required: distillModelRequired
         },
-        required: ["query_domain", "models", "strongest_picks"]
-      }
-    })
+        strongest_picks: {
+          type: "object",
+          properties: pickProps,
+          required: pickRequired
+        }
+      },
+      required: ["query_domain", "models", "strongest_picks"]
+    }
+  }
+}
+
+function buildAndRunDistillerAgent(models, modelResponses, query, anonMap) {
+  var d = buildDistillerPromptAndSchema(models, modelResponses, query, anonMap)
+  return agent(d.prompt, {
+    label: "analyst",
+    phase: "Review & Distill",
+    model: "sonnet",
+    schema: d.schema
   })
 }
 
-var phase2 = await parallel(reviewThunks)
-
-var reviewResults = {}
-for (var rri = 0; rri < selectedReviewers.length; rri++) {
-  reviewResults[selectedReviewers[rri].name] = phase2[rri]
-}
-
-if (loggingEnabled) {
-  distillation = phase2[phase2.length - 1]
-  log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ") + analyst distillation.")
-} else {
-  log("Reviews collected (" + selectedReviewers.length + "/" + modelCount + ").")
+async function buildAndRunDistiller(models, modelResponses, query, anonMap) {
+  var d = buildDistillerPromptAndSchema(models, modelResponses, query, anonMap)
+  return await agent(d.prompt, {
+    label: "analyst",
+    phase: "Review & Distill",
+    model: "sonnet",
+    schema: d.schema
+  })
 }
 
 // ── Phase 3: Chairman Synthesis ─────────────────────────────────────────────
 
 var chairmanParts = [
-  "You are the Chairman of a " + modelCount + "-model LLM Council. " + modelCount + " different AI models (" + modelNames.join(", ") + ") answered a question independently, then " + selectedReviewers.length + " of them peer-reviewed each other anonymously.",
-  "",
+  "You are the Chairman of a " + modelCount + "-model LLM Council. " + modelCount + " different AI models (" + modelNames.join(", ") + ") answered a question independently.",
+  ""
+]
+
+if (!reviewsSkipped) {
+  chairmanParts[0] += " Then " + selectedReviewers.length + " of them peer-reviewed each other anonymously."
+}
+
+chairmanParts.push(
   "Your job: synthesize everything into a clear, actionable verdict.",
   "",
   "## The Question",
@@ -349,22 +361,26 @@ var chairmanParts = [
   "",
   "## Model Responses (de-anonymized)",
   ""
-]
+)
 for (var cri = 0; cri < models.length; cri++) {
   chairmanParts.push("**" + models[cri].name + ":**")
   chairmanParts.push(modelResponses[models[cri].name] || "(no response)")
   chairmanParts.push("")
 }
-chairmanParts.push("## Anonymous Peer Reviews (" + selectedReviewers.length + " of " + modelCount + " models reviewed)")
-chairmanParts.push("")
-for (var crri = 0; crri < selectedReviewers.length; crri++) {
-  var revText = reviewResults[selectedReviewers[crri].name] || "(review failed)"
-  chairmanParts.push("**Review " + (crri + 1) + " (by " + selectedReviewers[crri].name + "):**\n" + revText + "\n")
+
+if (!reviewsSkipped) {
+  chairmanParts.push("## Anonymous Peer Reviews (" + selectedReviewers.length + " of " + modelCount + " models reviewed)")
+  chairmanParts.push("")
+  for (var crri = 0; crri < selectedReviewers.length; crri++) {
+    var revText = reviewResults[selectedReviewers[crri].name] || "(review failed)"
+    chairmanParts.push("**Review " + (crri + 1) + " (by " + selectedReviewers[crri].name + "):**\n" + revText + "\n")
+  }
+  chairmanParts.push("## Anonymization Key (for your reference)")
+  for (var caki = 0; caki < models.length; caki++) {
+    chairmanParts.push("Response " + anonMap[models[caki].name] + " = " + models[caki].name)
+  }
 }
-chairmanParts.push("## Anonymization Key (for your reference)")
-for (var caki = 0; caki < models.length; caki++) {
-  chairmanParts.push("Response " + anonMap[models[caki].name] + " = " + models[caki].name)
-}
+
 chairmanParts.push(
   "",
   "Produce the council verdict using this EXACT structure with these markdown headers:",
@@ -374,10 +390,18 @@ chairmanParts.push(
   "",
   "## Where the Council Clashes",
   "[Genuine disagreements between models. Present both sides. Explain WHY the models diverge - different training data? Different reasoning approaches? Different implicit assumptions?]",
-  "",
-  "## Review Highlights",
-  "[Key insights from the peer review round. What did reviewers catch that the original responses missed? Which response was rated strongest and why?]",
-  "",
+  ""
+)
+
+if (!reviewsSkipped) {
+  chairmanParts.push(
+    "## Review Highlights",
+    "[Key insights from the peer review round. What did reviewers catch that the original responses missed? Which response was rated strongest and why?]",
+    ""
+  )
+}
+
+chairmanParts.push(
   "## Final Answer",
   "[Your synthesized answer to the original question. Be direct. You may side with one model over the others if its reasoning is strongest. Incorporate the best insights from all of them.]"
 )
@@ -407,7 +431,6 @@ if (loggingEnabled) {
   phase("Logging")
   log("Persisting verdict data...")
 
-  // Get timing via structured output
   var timing = await agent(
     "Run these two bash commands and return the output of each:\n" +
     "1. date -u +%Y-%m-%dT%H:%M:%SZ\n" +
@@ -429,7 +452,6 @@ if (loggingEnabled) {
     }
   )
 
-  // Extract source models from the chairman's ## Sources section
   var sourceModels = []
   if (verdict) {
     for (var smi = 0; smi < models.length; smi++) {
@@ -440,7 +462,6 @@ if (loggingEnabled) {
     }
   }
 
-  // Build log entry with real values
   var positions = {}
   var reasoningSummaries = {}
   var modelMeta = []
@@ -473,8 +494,8 @@ if (loggingEnabled) {
     timestamp: timing.timestamp,
     query: query,
     query_domain: distillation.query_domain,
-    review_mode: fullMode ? "full" : "simple",
-    reviewers: selectedReviewers.map(function(m) { return m.name }),
+    review_mode: reviewsSkipped ? "skipped" : (fullMode ? "full" : "simple"),
+    reviewers: reviewsSkipped ? [] : selectedReviewers.map(function(m) { return m.name }),
     models: modelMeta,
     positions: positions,
     reasoning_summaries: reasoningSummaries,
@@ -487,7 +508,6 @@ if (loggingEnabled) {
   var finalJson = JSON.stringify(logEntry)
   var escapedJson = finalJson.replace(/'/g, "'\\''")
 
-  // Build response file write commands
   var responseWriteCmds = []
   for (var rwi = 0; rwi < models.length; rwi++) {
     responseWriteCmds.push(
@@ -538,6 +558,13 @@ if (loggingEnabled) {
 
 var anonMappingStr = models.map(function(m) { return m.name + "=" + anonMap[m.name] }).join(", ")
 
+var reviewLine
+if (reviewsSkipped) {
+  reviewLine = "*Reviews: skipped (≤" + "3 models — chairman synthesizes directly)*"
+} else {
+  reviewLine = "*Review mode: " + (fullMode ? "full (" + modelCount + "/" + modelCount + " reviewers)" : "simple (" + selectedReviewers.length + "/" + modelCount + " reviewers) | Use --full for all " + modelCount) + "*"
+}
+
 return [
   "# LLM Council Cross-Model — Verdict",
   "",
@@ -551,6 +578,6 @@ return [
   "",
   "*Council: " + modelNames.join(", ") + " (" + configSource + ")*",
   "*Anonymization: " + anonMappingStr + "*",
-  "*Review mode: " + (fullMode ? "full (" + modelCount + "/" + modelCount + " reviewers)" : "simple (" + selectedReviewers.length + "/" + modelCount + " reviewers) | Use --full for all " + modelCount) + "*",
+  reviewLine,
   loggingEnabled ? "*Logging: on*" : "*Logging: off (set \"logging\": true in models.json to enable)*"
 ].join("\n");
