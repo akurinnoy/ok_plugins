@@ -148,6 +148,34 @@ Read the diff and any relevant source files for context. Check for:
 - Avoiding code duplication
 - Following language idioms and project patterns
 
+**Naming**
+
+Check identifiers introduced or renamed in the diff (variables, constants, functions, types, parameters, struct fields, test names). For each weak name, suggest a concrete replacement.
+- Vague or generic names: `data`, `info`, `tmp`, `val`, `obj`, `res`, `item`, `handler`, `manager`, `util`
+- Names that don't match behavior: `getX` that mutates or does I/O, `isX` that doesn't return a boolean, `validate` that also transforms
+- Unclear abbreviations or single letters outside short-lived scopes (loop indices and idiomatic receivers are fine)
+- Missing units or kinds where it matters: `timeout` → `timeoutSeconds`, `size` → `sizeBytes`
+- Booleans that don't read as predicates: `flag`, `status` → `isReady`, `hasFinalizer`, `shouldRetry`
+- Inconsistency with the surrounding codebase: same concept named differently (`user`/`account`/`member`), or casing/prefix conventions not followed
+- Type or package redundancy: `user.UserName`, `config.ConfigLoader`, Hungarian-style prefixes (`strName`, `arrItems`)
+- Language conventions: Go exported vs unexported and initialisms (`ID`, `URL`), Python `snake_case`, TS/JS `camelCase`/`PascalCase`
+
+Only flag names a reader would actually stumble on — don't bikeshed on taste. Format each finding as: `file:line` — `currentName` → `suggestedName` — one-line reason.
+
+**Comments and Descriptions**
+
+Check comments, docstrings/godoc/JSDoc, CRD/API field descriptions, CLI flag help text, and log/error messages added or changed in the diff. For each weak one, propose rewritten text.
+- Comments that restate the code ("increment counter") instead of explaining *why* — suggest the why, or suggest removing the comment
+- Stale or misleading comments: no longer match the code after this change, including untouched comments adjacent to modified code
+- Missing docs on exported/public APIs, non-obvious logic, magic numbers, workarounds, and deliberate deviations from the obvious approach
+- Vague descriptions: "handles the request", "processes data" — say what, under which conditions, and with what side effects/errors
+- User-facing descriptions (CRD fields, flags, config options): state default value, valid range/values, and effect
+- Language conventions: Go doc comments start with the identifier name; Python docstrings describe args/returns/raises where non-obvious
+- Leftover TODOs without context or owner, commented-out code, and process notes ("changed per review", "fixed bug")
+- Spelling and grammar errors that hurt clarity
+
+Format each finding as: `file:line` — current text → suggested text — one-line reason.
+
 **Performance**
 - Algorithmic complexity
 - Database/API query efficiency
@@ -199,6 +227,19 @@ Before reporting issues:
 ### Suggestions
 *Nice-to-have improvements*
 - [Improvement idea]
+
+### Naming and Comments
+*Concrete rename and comment rewrite suggestions. Misleading names or comments that could cause bugs belong in Warnings instead.*
+
+**Naming**
+| Location | Current | Suggested | Reason |
+|----------|---------|-----------|--------|
+| `file.go:42` | `data` | `pendingPods` | describes contents |
+
+**Comments / Descriptions**
+- `file.go:57` — "process items" → "Requeue items whose lease expired; skip those owned by another replica." — explains what and why
+
+*Omit a subsection if there is nothing worth flagging.*
 
 ### Already Addressed
 *Issues that were already discussed/fixed*
