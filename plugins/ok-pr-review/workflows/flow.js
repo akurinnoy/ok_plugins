@@ -158,7 +158,7 @@ var reviewResult = await agent(
   '- ' + reposDir + '/profile.md\n\n' +
   'Check for linked issues (Fixes #N, Closes #N) in the PR description. If found:\n' +
   '```bash\ngh issue view <N> --repo ' + owner + '/' + repo + '\n```\n\n' +
-  'Analyze for: security, correctness vs requirements, code quality, performance, best practices, K8s operator specifics (if applicable).\n' +
+  'Analyze for: security, correctness vs requirements, code quality, naming (suggest concrete renames), comments and descriptions (suggest rewritten text), performance, best practices, K8s operator specifics (if applicable).\n' +
   'Cross-reference with existing feedback in inline-comments.json.\n\n' +
   'Write the full review to: ' + reposDir + '/' + number + '-review.md\n\n' +
   'Return the verdict and issue counts.',

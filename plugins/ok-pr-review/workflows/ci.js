@@ -177,6 +177,8 @@ var reviewResult = await agent(
   '- Security: injection, hardcoded secrets, auth issues, input validation\n' +
   '- Correctness: does the PR solve the linked issue? Edge cases handled?\n' +
   '- Code quality: clarity, error handling, duplication, idioms\n' +
+  '- Naming: vague, misleading, inconsistent, or unconventional identifiers in the diff; suggest concrete replacements (file:line, current -> suggested, reason)\n' +
+  '- Comments and descriptions: comments that restate code, stale/misleading comments, missing docs on public APIs, vague CRD/flag/config descriptions; propose rewritten text\n' +
   '- Performance: complexity, query efficiency, memory\n' +
   '- Best practices: test coverage, docs, breaking changes\n' +
   '- K8s operator specifics (if applicable): reconciliation, status, events, finalizers\n\n' +
