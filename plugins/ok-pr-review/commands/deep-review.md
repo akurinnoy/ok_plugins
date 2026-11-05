@@ -84,6 +84,7 @@ Extract the PR details from the conversation history:
 
 **This command BUILDS UPON the standard review** by adding:
 - Deep design and abstraction quality analysis
+- Behaviour difference analysis (old vs. new runtime behaviour per changed code path)
 - Code thoughtfulness and curation indicators
 - Testing quality and rigor assessment
 - Language-specific anti-pattern detection
@@ -242,6 +243,22 @@ For every place where code **produces data consumed by an external system**:
 
 **Rule**: Unverified integration findings go in Suggestions, NOT Critical.
 
+### I. Behaviour Difference Analysis
+
+For each changed code path, compare **behaviour before the PR** vs **behaviour after the PR** — not just what the diff adds, but what the runtime actually does differently.
+
+**Behaviour change inventory:**
+- [ ] **Enumerate changed behaviours**: For each modified function/handler/module, state: what it did before → what it does now. If you cannot articulate the old behaviour from the diff, read the pre-change code (`git show <base>:<path>`) — do not guess.
+- [ ] **Intended vs unintended changes**: Which behaviour changes are clearly the PR's purpose (stated in title/description), and which are incidental side effects of the implementation? Flag any change with no explanation in the PR description.
+- [ ] **Silent behaviour changes**: Changes that alter behaviour without changing types or signatures — new default values, changed fallback paths, reordered conditions, off-by-one boundary shifts, different error messages/codes, changed nil/null/zero handling.
+- [ ] **Contract and semantics changes**: Return value meaning, error semantics (which errors, when), ordering guarantees, idempotency, concurrency/timing effects, side effects (writes, emissions, cache invalidation) — do any differ from before?
+- [ ] **Configuration and defaults**: Do defaults, feature flags, env vars, or migration behaviour change for existing deployments? Are existing persisted values still interpreted the same way?
+- [ ] **Callers of changed code**: Trace existing callers of changed functions. Do all of them expect the new behaviour? A caller updated to the new semantics is fine; an *unupdated* caller relying on old behaviour is a bug.
+- [ ] **Behaviour changes covered by tests**: For each identified behaviour difference, is there a test pinning the NEW behaviour? A behaviour change without an updated/added test means the change is unverified and future refactors can silently revert it.
+- [ ] **Pure refactors verify clean**: If the PR claims to be a refactor/"no functional changes", verify the behaviour inventory is actually empty — that claim is exactly where unintended differences hide.
+
+**Rule**: Report each confirmed unintended or unexplained behaviour difference with: old behaviour, new behaviour, trigger conditions, affected callers/consumers, and whether a test covers it. Unverified differences (could not trace old code) go in Suggestions, NOT Critical.
+
 ## Deep Review Output Format
 
 ```markdown
@@ -271,6 +288,9 @@ For every place where code **produces data consumed by an external system**:
 
 ### Integration Contract Verification
 [Verified: ✅ / Unverified: ⚠️]
+
+### Behaviour Difference Analysis
+[Table or list: old behaviour → new behaviour | intended? | covered by test? | affected callers]
 
 ### Critical Deep Issues
 [New issues not in standard review]
