@@ -4,10 +4,10 @@ export const meta = {
   whenToUse: 'When running a CI review pipeline, non-interactive full PR review, or automated review with auto-post',
   phases: [
     { title: 'Fetch', detail: 'Fetch PR data and resolve identity' },
-    { title: 'Summary', detail: 'Pre-flight orientation and scope decision', model: 'claude-sonnet-4-6' },
-    { title: 'Review', detail: 'Standard code review', model: 'claude-opus-4-6' },
-    { title: 'Deep Analysis', detail: 'Deep review + impact (conditional, parallel)', model: 'claude-opus-4-6' },
-    { title: 'Post', detail: 'Aggregate findings and post to GitHub', model: 'claude-sonnet-4-6' },
+    { title: 'Summary', detail: 'Pre-flight orientation and scope decision' },
+    { title: 'Review', detail: 'Standard code review' },
+    { title: 'Deep Analysis', detail: 'Deep review + impact (conditional, parallel)' },
+    { title: 'Post', detail: 'Aggregate findings and post to GitHub' },
   ],
 }
 
@@ -112,7 +112,7 @@ var fetchResult = await agent(
   'test -f "' + reposDir + '/profile.md" && echo "PROFILE_EXISTS" || echo "NO_PROFILE"\n' +
   '```\n\n' +
   'Return the GitHub username and whether the profile exists.',
-  { label: 'fetch', phase: 'Fetch', model: 'claude-sonnet-4-6', effort: 'low' }
+  { label: 'fetch', phase: 'Fetch', effort: 'low' }
 )
 
 log('Fetch complete')
@@ -143,7 +143,7 @@ var summaryResult = await agent(
   'Provide a one-sentence reason for your scope decision.\n\n' +
   'Set changedFiles to the number of files changed in the PR.\n\n' +
   'Also write the full summary to: ' + reposDir + '/' + number + '-summary.md',
-  { label: 'summary', phase: 'Summary', model: 'claude-sonnet-4-6', schema: SUMMARY_SCHEMA }
+  { label: 'summary', phase: 'Summary', schema: SUMMARY_SCHEMA }
 )
 
 log('Summary: ' + summaryResult.summary)
@@ -185,7 +185,7 @@ var reviewResult = await agent(
   'Cross-reference with existing feedback in inline-comments.json. Do not repeat what others already caught.\n\n' +
   'Write the full review to: ' + reposDir + '/' + number + '-review.md\n\n' +
   'Return the verdict and counts of issues found.',
-  { label: 'review', phase: 'Review', model: 'claude-opus-4-6', schema: REVIEW_SCHEMA }
+  { label: 'review', phase: 'Review', schema: REVIEW_SCHEMA }
 )
 
 log('Review verdict: ' + reviewResult.verdict + ' (critical: ' + reviewResult.criticalCount + ', warnings: ' + reviewResult.warningCount + ')')
@@ -220,7 +220,7 @@ if (summaryResult.scope.runDeepReview) {
       'Do NOT repeat findings from the standard review.\n\n' +
       'Write findings to: ' + reposDir + '/' + number + '-deep-review.md\n\n' +
       'Return a brief text summary of your key findings.',
-      { label: 'deep-review', phase: 'Deep Analysis', model: 'claude-opus-4-6' }
+      { label: 'deep-review', phase: 'Deep Analysis' }
     )
   })
 }
@@ -248,7 +248,7 @@ if (summaryResult.scope.runImpact) {
       'Do NOT repeat code-level findings from the standard review.\n\n' +
       'Write findings to: ' + reposDir + '/' + number + '-impact.md\n\n' +
       'Return a brief text summary of your key findings.',
-      { label: 'impact', phase: 'Deep Analysis', model: 'claude-opus-4-6' }
+      { label: 'impact', phase: 'Deep Analysis' }
     )
   })
 }
@@ -296,7 +296,7 @@ var postResult = await agent(
   'Use collaborative tone: "Consider...", "Does it make sense to...?", "Would it be possible to...?"\n' +
   'Use regular hyphens, not em dashes. Lead with the point, no preamble. Short sentences.\n\n' +
   'Return the count of inline and general comments posted.',
-  { label: 'post', phase: 'Post', model: 'claude-sonnet-4-6', schema: POST_SCHEMA }
+  { label: 'post', phase: 'Post', schema: POST_SCHEMA }
 )
 
 log('Posted: ' + postResult.inlineComments + ' inline, ' + postResult.generalComments + ' general')

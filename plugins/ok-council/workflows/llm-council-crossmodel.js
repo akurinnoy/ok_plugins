@@ -326,7 +326,6 @@ function buildAndRunDistillerAgent(models, modelResponses, query, anonMap) {
   return agent(d.prompt, {
     label: "analyst",
     phase: "Review & Distill",
-    model: "sonnet",
     schema: d.schema
   })
 }
@@ -336,7 +335,6 @@ async function buildAndRunDistiller(models, modelResponses, query, anonMap) {
   return await agent(d.prompt, {
     label: "analyst",
     phase: "Review & Distill",
-    model: "sonnet",
     schema: d.schema
   })
 }
@@ -439,7 +437,6 @@ if (loggingEnabled) {
     {
       label: "get-timing",
       phase: "Logging",
-      model: "haiku",
       effort: "low",
       schema: {
         type: "object",

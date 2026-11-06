@@ -4,10 +4,10 @@ export const meta = {
   whenToUse: 'When the user wants a full PR review, says "review this PR", or provides a PR URL for review',
   phases: [
     { title: 'Fetch', detail: 'Fetch PR data and resolve identity' },
-    { title: 'Summary', detail: 'Pre-flight orientation + scope decision', model: 'claude-sonnet-4-6' },
-    { title: 'Review', detail: 'Standard code review', model: 'claude-opus-4-6' },
-    { title: 'Deep Analysis', detail: 'Deep review + impact (conditional, parallel)', model: 'claude-opus-4-6' },
-    { title: 'Draft', detail: 'Aggregate findings into review draft', model: 'claude-sonnet-4-6' },
+    { title: 'Summary', detail: 'Pre-flight orientation + scope decision' },
+    { title: 'Review', detail: 'Standard code review' },
+    { title: 'Deep Analysis', detail: 'Deep review + impact (conditional, parallel)' },
+    { title: 'Draft', detail: 'Aggregate findings into review draft' },
   ],
 }
 
@@ -104,7 +104,7 @@ await agent(
   'mkdir -p "' + reposDir + '"\n' +
   '```\n\n' +
   'Return confirmation when done.',
-  { label: 'fetch', phase: 'Fetch', model: 'claude-sonnet-4-6', effort: 'low' }
+  { label: 'fetch', phase: 'Fetch', effort: 'low' }
 )
 
 log('Fetch complete')
@@ -131,7 +131,7 @@ var summaryResult = await agent(
   '- For small PRs (< 5 files, single concern, no security/ops): both false\n' +
   '- Provide a one-sentence reason for your scope decision\n\n' +
   'Write the full summary to: ' + reposDir + '/' + number + '-summary.md',
-  { label: 'summary', phase: 'Summary', model: 'claude-sonnet-4-6', schema: SUMMARY_SCHEMA }
+  { label: 'summary', phase: 'Summary', schema: SUMMARY_SCHEMA }
 )
 
 log('Summary: ' + summaryResult.summary)
@@ -162,7 +162,7 @@ var reviewResult = await agent(
   'Cross-reference with existing feedback in inline-comments.json.\n\n' +
   'Write the full review to: ' + reposDir + '/' + number + '-review.md\n\n' +
   'Return the verdict and issue counts.',
-  { label: 'review', phase: 'Review', model: 'claude-opus-4-6', schema: REVIEW_SCHEMA }
+  { label: 'review', phase: 'Review', schema: REVIEW_SCHEMA }
 )
 
 log('Review verdict: ' + reviewResult.verdict + ' (critical: ' + reviewResult.criticalCount + ', warnings: ' + reviewResult.warningCount + ')')
@@ -188,7 +188,7 @@ if (summaryResult.scope.runDeepReview) {
       '- ' + reposDir + '/profile.md (if exists)\n\n' +
       'Focus on: design quality, code thoughtfulness, testing rigor, language anti-patterns, security deep dive, performance, integration contracts.\n\n' +
       'Write findings to: ' + reposDir + '/' + number + '-deep-review.md',
-      { label: 'deep-review', phase: 'Deep Analysis', model: 'claude-opus-4-6' }
+      { label: 'deep-review', phase: 'Deep Analysis' }
     )
   })
 }
@@ -207,7 +207,7 @@ if (summaryResult.scope.runImpact) {
       'Tier 1 (always unless docs-only): observability, failure handling, resource cleanup, network/timeouts, secret handling.\n' +
       'Tier 2 (trigger-based): supply chain, RBAC, state management, API endpoints, DB, dependencies, compatibility, K8s operator, config, PII.\n\n' +
       'Write findings to: ' + reposDir + '/' + number + '-impact.md',
-      { label: 'impact', phase: 'Deep Analysis', model: 'claude-opus-4-6' }
+      { label: 'impact', phase: 'Deep Analysis' }
     )
   })
 }
@@ -243,7 +243,7 @@ var draftResult = await agent(
   'Use regular hyphens, not em dashes. Short sentences. Lead with the point.\n\n' +
   'Do NOT post anything to GitHub. Only write the comment file.\n\n' +
   'Return the counts and file path.',
-  { label: 'draft', phase: 'Draft', model: 'claude-sonnet-4-6', schema: DRAFT_SCHEMA }
+  { label: 'draft', phase: 'Draft', schema: DRAFT_SCHEMA }
 )
 
 log('Draft ready: ' + draftResult.inlineComments + ' inline, ' + draftResult.generalComments + ' general')
