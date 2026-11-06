@@ -4,14 +4,14 @@ PR review suite for Claude Code: summary, standard review, deep review, system-l
 
 ## Commands
 
-| Command | Model | Description |
-|---------|-------|-------------|
-| `/ok-pr-review:summary` | sonnet | Quick pre-flight orientation - key areas, risks, reviewer/author guidance |
-| `/ok-pr-review:review` | opus | Standard code review - correctness, security, quality, naming, comments, performance |
-| `/ok-pr-review:deep-review` | opus | Deep analysis - design quality, anti-patterns, testing rigor |
-| `/ok-pr-review:impact` | opus | System-level review - supply chain, RBAC, ops, compatibility |
-| `/ok-pr-review:learn-repo` | sonnet | Study a repo and write a reusable domain profile |
-| `/ok-pr-review:comment` | sonnet | Aggregate findings and post to GitHub as a review (pending draft or submitted) |
+| Command | Description |
+|---------|-------------|
+| `/ok-pr-review:summary` | Quick pre-flight orientation - key areas, risks, reviewer/author guidance |
+| `/ok-pr-review:review` | Standard code review - correctness, security, quality, naming, comments, performance |
+| `/ok-pr-review:deep-review` | Deep analysis - design quality, anti-patterns, testing rigor |
+| `/ok-pr-review:impact` | System-level review - supply chain, RBAC, ops, compatibility |
+| `/ok-pr-review:learn-repo` | Study a repo and write a reusable domain profile |
+| `/ok-pr-review:comment` | Aggregate findings and post to GitHub as a review (pending draft or submitted) |
 
 ## Workflow
 

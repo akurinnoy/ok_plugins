@@ -1,7 +1,6 @@
 ---
 description: Quick PR summary - key areas, risks, and reviewer/author guidance
 argument-hint: <pr-url | owner/repo#number>
-model: claude-sonnet-4-6
 allowed-tools:
   - Bash
   - Read

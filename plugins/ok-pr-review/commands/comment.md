@@ -1,7 +1,6 @@
 ---
 description: Prepare and optionally post review comments to GitHub
 argument-hint: <pr-url | owner/repo#number>
-model: claude-sonnet-4-6
 allowed-tools:
   - Bash
   - Read
