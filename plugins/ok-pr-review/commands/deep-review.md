@@ -1,7 +1,6 @@
 ---
 description: Deep analysis of design quality, anti-patterns, and testing rigor
 argument-hint: <pr-url | owner/repo#number>
-model: claude-opus-4-6
 allowed-tools:
   - Read
   - Grep

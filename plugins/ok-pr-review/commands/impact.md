@@ -1,7 +1,6 @@
 ---
 description: System-level review - supply chain, RBAC, ops, compatibility, evolvability
 argument-hint: <pr-url | owner/repo#number>
-model: claude-opus-4-6
 allowed-tools:
   - Bash
   - Read
